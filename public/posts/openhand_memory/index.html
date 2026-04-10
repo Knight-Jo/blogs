@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="en" dir="auto" data-theme="auto">
+
+<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script><meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<meta name="robots" content="noindex, nofollow">
+<title>Openhand_memory | My New Hugo Project</title>
+<meta name="keywords" content="">
+<meta name="description" content="概述
+OpenHands 的记忆系统是一个多层次的系统，负责管理 AI Agent 的信息检索和对话历史处理。它使 Agent 能够在执行任务时记住重要的上下文信息，并根据需要检索知识。
+记忆系统主要由三个核心组件构成：
+
+Memory (openhands/memory/memory.py) - 处理召回动作和微代理知识检索
+ConversationMemory (openhands/memory/conversation_memory.py) - 将事件流转换为 LLM 可用的消息格式
+Condenser (openhands/memory/condenser/) - 当对话历史过长时进行压缩和摘要
+
+
+1. Recall 类型
+OpenHands 定义了两种召回类型，用于区分不同来源的记忆检索：
+# openhands/events/recall_type.py
+class RecallType(str, Enum):
+    WORKSPACE_CONTEXT = &#39;workspace_context&#39;  # 工作区上下文（仓库、运行时等）
+    KNOWLEDGE = &#39;knowledge&#39;                  # 知识微代理触发
+
+  
+      
+          类型
+          触发方式
+          用途
+      
+  
+  
+      
+          WORKSPACE_CONTEXT
+          用户消息附带召回请求
+          获取仓库信息、运行时环境、对话指令
+      
+      
+          KNOWLEDGE
+          匹配知识微代理的关键词
+          检索用户自定义的知识库
+      
+  
+
+
+2. 微代理 (Microagent) 系统
+微代理是 OpenHands 记忆系统的重要组成部分，允许用户定义可被动态检索的知识片段。
+2.1 微代理类型
+# openhands/microagent/types.py
+class MicroagentType(str, Enum):
+    KNOWLEDGE = &#39;knowledge&#39;       # 关键词触发型知识
+    REPO_KNOWLEDGE = &#39;repo_knowledge&#39;  # 仓库级知识，始终激活
+    TASK = &#39;task&#39;                 # 任务型，需要用户输入
+
+  
+      
+          类型
+          描述
+          触发方式
+      
+  
+  
+      
+          KNOWLEDGE
+          可选微代理
+          对话中包含关键词时触发
+      
+      
+          REPO_KNOWLEDGE
+          仓库级知识
+          始终加载，提供仓库特定信息
+      
+      
+          TASK
+          任务型
+          需要用户通过 /agent_name 命令调用
+      
+  
+
+2.2 微代理存储位置
+微代理从以下位置加载：">
+<meta name="author" content="">
+<link rel="canonical" href="http://localhost:1313/posts/openhand_memory/">
+<link crossorigin="anonymous" href="/assets/css/stylesheet.199042e659bc7245f5609d333d6c044eb554a0640849bb874e1dff8eb0f57209.css" integrity="sha256-GZBC5lm8ckX1YJ0zPWwETrVUoGQISbuHTh3/jrD1cgk=" rel="preload stylesheet" as="style">
+<link rel="icon" href="http://localhost:1313/favicon.ico">
+<link rel="icon" type="image/png" sizes="16x16" href="http://localhost:1313/favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="http://localhost:1313/favicon-32x32.png">
+<link rel="apple-touch-icon" href="http://localhost:1313/apple-touch-icon.png">
+<link rel="mask-icon" href="http://localhost:1313/safari-pinned-tab.svg">
+<meta name="theme-color" content="#2e2e33">
+<meta name="msapplication-TileColor" content="#2e2e33">
+<link rel="alternate" hreflang="en" href="http://localhost:1313/posts/openhand_memory/">
+<noscript>
+    <style>
+        #theme-toggle,
+        .top-link {
+            display: none;
+        }
+
+    </style>
+    <style>
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --theme: rgb(29, 30, 32);
+                --entry: rgb(46, 46, 51);
+                --primary: rgb(218, 218, 219);
+                --secondary: rgb(155, 156, 157);
+                --tertiary: rgb(65, 66, 68);
+                --content: rgb(196, 196, 197);
+                --code-block-bg: rgb(46, 46, 51);
+                --code-bg: rgb(55, 56, 62);
+                --border: rgb(51, 51, 51);
+                color-scheme: dark;
+            }
+
+            .list {
+                background: var(--theme);
+            }
+
+            .toc {
+                background: var(--entry);
+            }
+        }
+
+        @media (prefers-color-scheme: light) {
+            .list::-webkit-scrollbar-thumb {
+                border-color: var(--code-bg);
+            }
+        }
+
+    </style>
+</noscript>
+<script>
+    if (localStorage.getItem("pref-theme") === "dark") {
+        document.querySelector("html").dataset.theme = 'dark';
+    } else if (localStorage.getItem("pref-theme") === "light") {
+       document.querySelector("html").dataset.theme = 'light';
+    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.querySelector("html").dataset.theme = 'dark';
+    } else {
+        document.querySelector("html").dataset.theme = 'light';
+    }
+
+</script>
+</head>
+<body id="top">
+    <header class="header">
+    <nav class="nav">
+        <div class="logo">
+            <a href="http://localhost:1313/" accesskey="h" title="My New Hugo Project (Alt + H)">My New Hugo Project</a>
+            <div class="logo-switches">
+                <button id="theme-toggle" accesskey="t" title="(Alt + T)" aria-label="Toggle theme">
+                    <svg id="moon" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                    <svg id="sun" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <ul id="menu">
+        </ul>
+    </nav>
+</header>
+<main class="main">
+
+<article class="post-single">
+  <header class="post-header">
+    
+    <h1 class="post-title entry-hint-parent">
+      Openhand_memory
+    </h1>
+    <div class="post-meta"><span title='2026-04-10 09:51:46 +0800 CST'>April 10, 2026</span>
+
+</div>
+  </header> 
+  <div class="post-content"><h2 id="概述">概述<a hidden class="anchor" aria-hidden="true" href="#概述">#</a></h2>
+<p>OpenHands 的记忆系统是一个多层次的系统，负责管理 AI Agent 的信息检索和对话历史处理。它使 Agent 能够在执行任务时记住重要的上下文信息，并根据需要检索知识。</p>
+<p>记忆系统主要由三个核心组件构成：</p>
+<ol>
+<li><strong>Memory</strong> (<code>openhands/memory/memory.py</code>) - 处理召回动作和微代理知识检索</li>
+<li><strong>ConversationMemory</strong> (<code>openhands/memory/conversation_memory.py</code>) - 将事件流转换为 LLM 可用的消息格式</li>
+<li><strong>Condenser</strong> (<code>openhands/memory/condenser/</code>) - 当对话历史过长时进行压缩和摘要</li>
+</ol>
+<hr>
+<h2 id="1-recall-类型">1. Recall 类型<a hidden class="anchor" aria-hidden="true" href="#1-recall-类型">#</a></h2>
+<p>OpenHands 定义了两种召回类型，用于区分不同来源的记忆检索：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#75715e"># openhands/events/recall_type.py</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">RecallType</span>(str, Enum):
+</span></span><span style="display:flex;"><span>    WORKSPACE_CONTEXT <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;workspace_context&#39;</span>  <span style="color:#75715e"># 工作区上下文（仓库、运行时等）</span>
+</span></span><span style="display:flex;"><span>    KNOWLEDGE <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;knowledge&#39;</span>                  <span style="color:#75715e"># 知识微代理触发</span>
+</span></span></code></pre></div><table>
+  <thead>
+      <tr>
+          <th>类型</th>
+          <th>触发方式</th>
+          <th>用途</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>WORKSPACE_CONTEXT</code></td>
+          <td>用户消息附带召回请求</td>
+          <td>获取仓库信息、运行时环境、对话指令</td>
+      </tr>
+      <tr>
+          <td><code>KNOWLEDGE</code></td>
+          <td>匹配知识微代理的关键词</td>
+          <td>检索用户自定义的知识库</td>
+      </tr>
+  </tbody>
+</table>
+<hr>
+<h2 id="2-微代理-microagent-系统">2. 微代理 (Microagent) 系统<a hidden class="anchor" aria-hidden="true" href="#2-微代理-microagent-系统">#</a></h2>
+<p>微代理是 OpenHands 记忆系统的重要组成部分，允许用户定义可被动态检索的知识片段。</p>
+<h3 id="21-微代理类型">2.1 微代理类型<a hidden class="anchor" aria-hidden="true" href="#21-微代理类型">#</a></h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#75715e"># openhands/microagent/types.py</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">MicroagentType</span>(str, Enum):
+</span></span><span style="display:flex;"><span>    KNOWLEDGE <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;knowledge&#39;</span>       <span style="color:#75715e"># 关键词触发型知识</span>
+</span></span><span style="display:flex;"><span>    REPO_KNOWLEDGE <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;repo_knowledge&#39;</span>  <span style="color:#75715e"># 仓库级知识，始终激活</span>
+</span></span><span style="display:flex;"><span>    TASK <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;task&#39;</span>                 <span style="color:#75715e"># 任务型，需要用户输入</span>
+</span></span></code></pre></div><table>
+  <thead>
+      <tr>
+          <th>类型</th>
+          <th>描述</th>
+          <th>触发方式</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>KNOWLEDGE</code></td>
+          <td>可选微代理</td>
+          <td>对话中包含关键词时触发</td>
+      </tr>
+      <tr>
+          <td><code>REPO_KNOWLEDGE</code></td>
+          <td>仓库级知识</td>
+          <td>始终加载，提供仓库特定信息</td>
+      </tr>
+      <tr>
+          <td><code>TASK</code></td>
+          <td>任务型</td>
+          <td>需要用户通过 <code>/agent_name</code> 命令调用</td>
+      </tr>
+  </tbody>
+</table>
+<h3 id="22-微代理存储位置">2.2 微代理存储位置<a hidden class="anchor" aria-hidden="true" href="#22-微代理存储位置">#</a></h3>
+<p>微代理从以下位置加载：</p>
+<table>
+  <thead>
+      <tr>
+          <th>位置</th>
+          <th>说明</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>openhands/skills/</code></td>
+          <td>全局公共微代理</td>
+      </tr>
+      <tr>
+          <td><code>~/.openhands/microagents/</code></td>
+          <td>用户自定义微代理</td>
+      </tr>
+      <tr>
+          <td><code>.openhands/microagents/repo.md</code></td>
+          <td>仓库级微代理</td>
+      </tr>
+      <tr>
+          <td><code>.cursorrules</code>, <code>AGENTS.md</code>, <code>agent.md</code></td>
+          <td>第三方兼容格式</td>
+      </tr>
+  </tbody>
+</table>
+<h3 id="23-微代理文件格式">2.3 微代理文件格式<a hidden class="anchor" aria-hidden="true" href="#23-微代理文件格式">#</a></h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-markdown" data-lang="markdown"><span style="display:flex;"><span># openhands/microagent/microagent.py
+</span></span><span style="display:flex;"><span># 知识微代理示例
+</span></span><span style="display:flex;"><span>name: my_knowledge
+</span></span><span style="display:flex;"><span>trigger: python, django, flask
+</span></span><span style="display:flex;"><span>---
+</span></span><span style="display:flex;"><span>这是一段关于 Python Web 开发的知识。
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span># 仓库微代理示例
+</span></span><span style="display:flex;"><span>name: repo_instructions
+</span></span><span style="display:flex;"><span>always_load: true
+</span></span><span style="display:flex;"><span>---
+</span></span><span style="display:flex;"><span>本仓库使用 Django 4.2 + Python 3.11 开发。
+</span></span></code></pre></div><h3 id="24-核心类">2.4 核心类<a hidden class="anchor" aria-hidden="true" href="#24-核心类">#</a></h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#75715e"># openhands/microagent/microagent.py</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">BaseMicroagent</span>(BaseModel):
+</span></span><span style="display:flex;"><span>    name: str
+</span></span><span style="display:flex;"><span>    content: str
+</span></span><span style="display:flex;"><span>    metadata: MicroagentMetadata
+</span></span><span style="display:flex;"><span>    source: str
+</span></span><span style="display:flex;"><span>    type: MicroagentType
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">KnowledgeMicroagent</span>(BaseMicroagent):
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;&#34;&#34;关键词触发的知识微代理&#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">match_trigger</span>(self, message: str) <span style="color:#f92672">-&gt;</span> str <span style="color:#f92672">|</span> <span style="color:#66d9ef">None</span>:
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#34;&#34;&#34;检查消息是否匹配触发关键词&#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">RepoMicroagent</span>(BaseMicroagent):
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;&#34;&#34;仓库级微代理，始终激活&#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">TaskMicroagent</span>(KnowledgeMicroagent):
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;&#34;&#34;任务型微代理，支持变量替换&#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">extract_variables</span>(self, content: str) <span style="color:#f92672">-&gt;</span> list[str]
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">requires_user_input</span>(self) <span style="color:#f92672">-&gt;</span> bool
+</span></span></code></pre></div><hr>
+<h2 id="3-memory-组件">3. Memory 组件<a hidden class="anchor" aria-hidden="true" href="#3-memory-组件">#</a></h2>
+<p><code>Memory</code> 类是记忆系统的核心处理器，订阅事件流并处理召回动作。</p>
+<h3 id="31-核心职责">3.1 核心职责<a hidden class="anchor" aria-hidden="true" href="#31-核心职责">#</a></h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#75715e"># openhands/memory/memory.py</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">Memory</span>:
+</span></span><span style="display:flex;"><span>    sid: str
+</span></span><span style="display:flex;"><span>    event_stream: EventStream
+</span></span><span style="display:flex;"><span>    repo_microagents: dict[str, RepoMicroagent]      <span style="color:#75715e"># 仓库微代理</span>
+</span></span><span style="display:flex;"><span>    knowledge_microagents: dict[str, KnowledgeMicroagent]  <span style="color:#75715e"># 知识微代理</span>
+</span></span><span style="display:flex;"><span>    repository_info: RepositoryInfo <span style="color:#f92672">|</span> <span style="color:#66d9ef">None</span>           <span style="color:#75715e"># 仓库信息</span>
+</span></span><span style="display:flex;"><span>    runtime_info: RuntimeInfo <span style="color:#f92672">|</span> <span style="color:#66d9ef">None</span>                 <span style="color:#75715e"># 运行时信息</span>
+</span></span><span style="display:flex;"><span>    conversation_instructions: ConversationInstructions <span style="color:#f92672">|</span> <span style="color:#66d9ef">None</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">async</span> <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">_on_event</span>(self, event: Event) <span style="color:#f92672">-&gt;</span> <span style="color:#66d9ef">None</span>:
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#34;&#34;&#34;处理事件流中的事件&#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> isinstance(event, RecallAction):
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">if</span> event<span style="color:#f92672">.</span>recall_type <span style="color:#f92672">==</span> RecallType<span style="color:#f92672">.</span>WORKSPACE_CONTEXT:
+</span></span><span style="display:flex;"><span>                <span style="color:#75715e"># 处理工作区上下文召回</span>
+</span></span><span style="display:flex;"><span>                workspace_obs <span style="color:#f92672">=</span> self<span style="color:#f92672">.</span>_on_workspace_context_recall(event)
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">elif</span> event<span style="color:#f92672">.</span>recall_type <span style="color:#f92672">==</span> RecallType<span style="color:#f92672">.</span>KNOWLEDGE:
+</span></span><span style="display:flex;"><span>                <span style="color:#75715e"># 处理知识微代理召回</span>
+</span></span><span style="display:flex;"><span>                microagent_obs <span style="color:#f92672">=</span> self<span style="color:#f92672">.</span>_on_microagent_recall(event)
+</span></span></code></pre></div><h3 id="32-工作区上下文召回">3.2 工作区上下文召回<a hidden class="anchor" aria-hidden="true" href="#32-工作区上下文召回">#</a></h3>
+<p>当触发 <code>WORKSPACE_CONTEXT</code> 召回时，<code>Memory</code> 返回：</p>
+<ul>
+<li><strong>仓库信息</strong>: 仓库名称、目录路径、分支名</li>
+<li><strong>运行时信息</strong>: 运行时类型、自定义密钥描述、工作目录</li>
+<li><strong>对话指令</strong>: 用户提供的对话级别指令</li>
+<li><strong>仓库微代理知识</strong>: 所有 <code>REPO_KNOWLEDGE</code> 类型微代理的内容</li>
+</ul>
+<h3 id="33-知识微代理召回">3.3 知识微代理召回<a hidden class="anchor" aria-hidden="true" href="#33-知识微代理召回">#</a></h3>
+<p>当触发 <code>KNOWLEDGE</code> 召回时，<code>Memory</code> 会：</p>
+<ol>
+<li>接收用户的查询消息</li>
+<li>遍历所有已加载的知识微代理</li>
+<li>使用 <code>match_trigger()</code> 检查是否匹配触发词</li>
+<li>返回匹配微代理的 <code>MicroagentKnowledge</code> 观察结果</li>
+</ol>
+<hr>
+<h2 id="4-conversationmemory-组件">4. ConversationMemory 组件<a hidden class="anchor" aria-hidden="true" href="#4-conversationmemory-组件">#</a></h2>
+<p><code>ConversationMemory</code> 负责将事件流转换为 LLM 可消费的 <code>Message</code> 列表。</p>
+<h3 id="41-处理流程">4.1 处理流程<a hidden class="anchor" aria-hidden="true" href="#41-处理流程">#</a></h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#75715e"># openhands/memory/conversation_memory.py</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">ConversationMemory</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">process_events</span>(
+</span></span><span style="display:flex;"><span>        self,
+</span></span><span style="display:flex;"><span>        condensed_history: list[Event],
+</span></span><span style="display:flex;"><span>        initial_user_action: MessageAction,
+</span></span><span style="display:flex;"><span>        forgotten_event_ids: set[int] <span style="color:#f92672">|</span> <span style="color:#66d9ef">None</span> <span style="color:#f92672">=</span> <span style="color:#66d9ef">None</span>,
+</span></span><span style="display:flex;"><span>        max_message_chars: int <span style="color:#f92672">|</span> <span style="color:#66d9ef">None</span> <span style="color:#f92672">=</span> <span style="color:#66d9ef">None</span>,
+</span></span><span style="display:flex;"><span>        vision_is_active: bool <span style="color:#f92672">=</span> <span style="color:#66d9ef">False</span>,
+</span></span><span style="display:flex;"><span>    ) <span style="color:#f92672">-&gt;</span> list[Message]:
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#34;&#34;&#34;将事件列表转换为消息列表&#34;&#34;&#34;</span>
+</span></span></code></pre></div><h3 id="42-消息构建规则">4.2 消息构建规则<a hidden class="anchor" aria-hidden="true" href="#42-消息构建规则">#</a></h3>
+<table>
+  <thead>
+      <tr>
+          <th>事件类型</th>
+          <th>转换为</th>
+          <th>说明</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>MessageAction</code></td>
+          <td><code>UserMessage</code> / <code>AssistantMessage</code></td>
+          <td>用户或助手消息</td>
+      </tr>
+      <tr>
+          <td><code>AgentThinkAction</code></td>
+          <td><code>AssistantMessage</code> (含思考)</td>
+          <td>Agent 思考过程</td>
+      </tr>
+      <tr>
+          <td><code>ToolCall</code></td>
+          <td><code>AssistantMessage</code> (含工具调用)</td>
+          <td>工具调用</td>
+      </tr>
+      <tr>
+          <td><code>ToolReturn</code></td>
+          <td><code>UserMessage</code> (模拟工具返回)</td>
+          <td>工具执行结果</td>
+      </tr>
+      <tr>
+          <td><code>Observation</code></td>
+          <td><code>UserMessage</code></td>
+          <td>观察结果</td>
+      </tr>
+  </tbody>
+</table>
+<h3 id="43-系统消息与初始消息">4.3 系统消息与初始消息<a hidden class="anchor" aria-hidden="true" href="#43-系统消息与初始消息">#</a></h3>
+<ul>
+<li><strong>系统消息</strong>: 确保在消息列表开头包含系统级指令</li>
+<li><strong>初始用户消息</strong>: 处理可能被遗忘的初始事件 ID</li>
+</ul>
+<hr>
+<h2 id="5-condenser-系统-历史压缩">5. Condenser 系统 (历史压缩)<a hidden class="anchor" aria-hidden="true" href="#5-condenser-系统-历史压缩">#</a></h2>
+<p>当对话历史超过 token 限制时，Condenser 系统负责压缩和精简历史。</p>
+<h3 id="51-condenser-基类">5.1 Condenser 基类<a hidden class="anchor" aria-hidden="true" href="#51-condenser-基类">#</a></h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#75715e"># openhands/memory/condenser/condenser.py</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">Condenser</span>(ABC):
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">condense</span>(self, view: View) <span style="color:#f92672">-&gt;</span> View <span style="color:#f92672">|</span> Condensation
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">condensed_history</span>(self, state: State) <span style="color:#f92672">-&gt;</span> View <span style="color:#f92672">|</span> Condensation
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">add_metadata</span>(self, key: str, value: Any) <span style="color:#f92672">-&gt;</span> <span style="color:#66d9ef">None</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">RollingCondenser</span>(Condenser, ABC):
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;&#34;&#34;滚动压缩器，判断何时应该压缩&#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">should_condense</span>(self, view: View) <span style="color:#f92672">-&gt;</span> bool
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">get_condensation</span>(self, view: View) <span style="color:#f92672">-&gt;</span> Condensation
+</span></span></code></pre></div><h3 id="52-可用-condenser-实现">5.2 可用 Condenser 实现<a hidden class="anchor" aria-hidden="true" href="#52-可用-condenser-实现">#</a></h3>
+<table>
+  <thead>
+      <tr>
+          <th>Condenser</th>
+          <th>说明</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>NoOpCondenser</code></td>
+          <td>不做任何处理</td>
+      </tr>
+      <tr>
+          <td><code>AmortizedForgettingCondenser</code></td>
+          <td>简单的半分半留遗忘</td>
+      </tr>
+      <tr>
+          <td><code>LLMSummarizingCondenser</code></td>
+          <td>基于 LLM 的文本摘要</td>
+      </tr>
+      <tr>
+          <td><code>StructuredSummaryCondenser</code></td>
+          <td>LLM 结构化状态摘要（函数调用风格）</td>
+      </tr>
+      <tr>
+          <td><code>ConversationWindowCondenser</code></td>
+          <td>保留关键事件 + 最近一半</td>
+      </tr>
+      <tr>
+          <td><code>ObservationMaskingCondenser</code></td>
+          <td>遮蔽旧观察结果</td>
+      </tr>
+      <tr>
+          <td><code>BrowserOutputCondenser</code></td>
+          <td>遮蔽浏览器输出</td>
+      </tr>
+      <tr>
+          <td><code>LLMAttentionCondenser</code></td>
+          <td>LLM 注意力机制选择重要事件</td>
+      </tr>
+      <tr>
+          <td><code>RecentEventsCondenser</code></td>
+          <td>仅保留最近事件</td>
+      </tr>
+      <tr>
+          <td><code>CondenserPipeline</code></td>
+          <td>链式组合多个 Condenser</td>
+      </tr>
+  </tbody>
+</table>
+<h3 id="53-配置示例">5.3 配置示例<a hidden class="anchor" aria-hidden="true" href="#53-配置示例">#</a></h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#75715e"># openhands/core/config/condenser_config.py</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">@dataclass</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">LLMSummarizingCondenserConfig</span>(CondenserConfig):
+</span></span><span style="display:flex;"><span>    type: str <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;llm_summarizing&#34;</span>
+</span></span><span style="display:flex;"><span>    summarize_after_n_events: int <span style="color:#f92672">=</span> <span style="color:#ae81ff">50</span>
+</span></span><span style="display:flex;"><span>    summary_instruction: str <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;请简要总结对话历史&#34;</span>
+</span></span></code></pre></div><h3 id="54-condenser--pipeline">5.4 Condenser  Pipeline<a hidden class="anchor" aria-hidden="true" href="#54-condenser--pipeline">#</a></h3>
+<p>可以将多个 Condenser 组合成管道使用：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#75715e"># 示例：先摘要，再遮蔽敏感信息</span>
+</span></span><span style="display:flex;"><span>pipeline <span style="color:#f92672">=</span> CondenserPipeline([
+</span></span><span style="display:flex;"><span>    LLMSummarizingCondenser(config),
+</span></span><span style="display:flex;"><span>    BrowserOutputCondenser(),
+</span></span><span style="display:flex;"><span>])
+</span></span></code></pre></div><hr>
+<h2 id="6-view-类">6. View 类<a hidden class="anchor" aria-hidden="true" href="#6-view-类">#</a></h2>
+<p><code>View</code> 是 Condenser 操作的数据结构，表示事件列表的视图：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#75715e"># openhands/memory/view.py</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">View</span>(BaseModel):
+</span></span><span style="display:flex;"><span>    events: list[Event]
+</span></span><span style="display:flex;"><span>    unhandled_condensation_request: bool <span style="color:#f92672">=</span> <span style="color:#66d9ef">False</span>
+</span></span><span style="display:flex;"><span>    forgotten_event_ids: set[int] <span style="color:#f92672">=</span> set()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">@staticmethod</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">from_events</span>(events: list[Event]) <span style="color:#f92672">-&gt;</span> View:
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#34;&#34;&#34;从事件列表创建视图，处理压缩事件&#34;&#34;&#34;</span>
+</span></span></code></pre></div><hr>
+<h2 id="7-数据流总结">7. 数据流总结<a hidden class="anchor" aria-hidden="true" href="#7-数据流总结">#</a></h2>
+<pre tabindex="0"><code>用户消息
+    │
+    ├─→ RecallAction (WORKSPACE_CONTEXT)
+    │       │
+    │       └─→ Memory._on_workspace_context_recall()
+    │               │
+    │               ├─→ 仓库信息
+    │               ├─→ 运行时信息
+    │               ├─→ 对话指令
+    │               └─→ 仓库微代理知识
+    │                       │
+    │                       └─→ RecallObservation ──→ EventStream
+    │
+    ├─→ RecallAction (KNOWLEDGE)
+    │       │
+    │       └─→ Memory._on_microagent_recall()
+    │               │
+    │               └─→ MicroagentKnowledge ──→ EventStream
+    │
+    └─→ ConversationMemory.process_events()
+            │
+            └─→ list[Message] ──→ LLM
+
+当历史过长时:
+    │
+    └─→ Condenser.condense()
+            │
+            └─→ Condensation / 精简后的事件列表
+</code></pre><hr>
+<h2 id="8-自定义记忆系统">8. 自定义记忆系统<a hidden class="anchor" aria-hidden="true" href="#8-自定义记忆系统">#</a></h2>
+<h3 id="81-创建自定义知识微代理">8.1 创建自定义知识微代理<a hidden class="anchor" aria-hidden="true" href="#81-创建自定义知识微代理">#</a></h3>
+<p>在 <code>~/.openhands/microagents/</code> 目录下创建 <code>.md</code> 文件：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-markdown" data-lang="markdown"><span style="display:flex;"><span># ~/.openhands/microagents/python_best_practices.md
+</span></span><span style="display:flex;"><span>name: python_best_practices
+</span></span><span style="display:flex;"><span>trigger: python, pip, virtualenv
+</span></span><span style="display:flex;"><span>---
+</span></span><span style="display:flex;"><span># Python 最佳实践
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">## 依赖管理
+</span></span></span><span style="display:flex;"><span><span style="color:#66d9ef">-</span> 使用 <span style="color:#e6db74">`pip freeze &gt; requirements.txt`</span> 锁定依赖
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">-</span> 优先使用虚拟环境隔离项目依赖
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e">## 代码规范
+</span></span></span><span style="display:flex;"><span><span style="color:#66d9ef">-</span> 遵循 PEP 8 规范
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">-</span> 使用 type hints 提升代码可读性
+</span></span></code></pre></div><h3 id="82-创建仓库级微代理">8.2 创建仓库级微代理<a hidden class="anchor" aria-hidden="true" href="#82-创建仓库级微代理">#</a></h3>
+<p>在项目根目录创建 <code>.openhands/microagents/repo.md</code>：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-markdown" data-lang="markdown"><span style="display:flex;"><span># .openhands/microagents/repo.md
+</span></span><span style="display:flex;"><span>name: my_project_context
+</span></span><span style="display:flex;"><span>always_load: true
+</span></span><span style="display:flex;"><span>---
+</span></span><span style="display:flex;"><span># 项目特定上下文
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>本项目使用 FastAPI + PostgreSQL 构建 RESTful API。
+</span></span></code></pre></div><hr>
+<h2 id="9-相关文件索引">9. 相关文件索引<a hidden class="anchor" aria-hidden="true" href="#9-相关文件索引">#</a></h2>
+<table>
+  <thead>
+      <tr>
+          <th>文件路径</th>
+          <th>说明</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>openhands/memory/memory.py</code></td>
+          <td>Memory 类主实现</td>
+      </tr>
+      <tr>
+          <td><code>openhands/memory/conversation_memory.py</code></td>
+          <td>ConversationMemory 实现</td>
+      </tr>
+      <tr>
+          <td><code>openhands/memory/view.py</code></td>
+          <td>View 类定义</td>
+      </tr>
+      <tr>
+          <td><code>openhands/memory/condenser/condenser.py</code></td>
+          <td>Condenser 基类</td>
+      </tr>
+      <tr>
+          <td><code>openhands/memory/condenser/impl/*.py</code></td>
+          <td>各 Condenser 实现</td>
+      </tr>
+      <tr>
+          <td><code>openhands/microagent/microagent.py</code></td>
+          <td>微代理基类</td>
+      </tr>
+      <tr>
+          <td><code>openhands/microagent/types.py</code></td>
+          <td>微代理类型定义</td>
+      </tr>
+      <tr>
+          <td><code>openhands/events/recall_type.py</code></td>
+          <td>RecallType 枚举</td>
+      </tr>
+      <tr>
+          <td><code>openhands/events/action/agent.py</code></td>
+          <td>RecallAction 定义</td>
+      </tr>
+      <tr>
+          <td><code>openhands/events/observation/agent.py</code></td>
+          <td>RecallObservation 等定义</td>
+      </tr>
+      <tr>
+          <td><code>openhands/core/config/condenser_config.py</code></td>
+          <td>Condenser 配置类</td>
+      </tr>
+  </tbody>
+</table>
+<hr>
+<h2 id="10-总结">10. 总结<a hidden class="anchor" aria-hidden="true" href="#10-总结">#</a></h2>
+<p>OpenHands 的记忆系统通过三个核心组件协同工作：</p>
+<ol>
+<li><strong>Memory</strong> 负责从多种来源（仓库信息、运行时环境、微代理知识）检索上下文</li>
+<li><strong>ConversationMemory</strong> 负责将事件流转换为 LLM 可理解的连续消息</li>
+<li><strong>Condenser</strong> 系统负责在对话历史过长时进行智能压缩</li>
+</ol>
+<p>这套设计使得 OpenHands Agent 能够：</p>
+<ul>
+<li>动态检索用户定义的知识</li>
+<li>保持长时间的跨任务对话</li>
+<li>在历史过长时自动进行智能摘要和压缩</li>
+</ul>
+
+
+  </div>
+
+  <footer class="post-footer">
+    <ul class="post-tags">
+    </ul>
+  </footer>
+</article>
+    </main>
+    
+<footer class="footer">
+        <span>&copy; 2026 <a href="http://localhost:1313/">My New Hugo Project</a></span> · 
+
+    <span>
+        Powered by
+        <a href="https://gohugo.io/" rel="noopener noreferrer" target="_blank">Hugo</a> &
+        <a href="https://github.com/adityatelange/hugo-PaperMod/" rel="noopener" target="_blank">PaperMod</a>
+    </span>
+</footer>
+<a href="#top" aria-label="go to top" title="Go to Top (Alt + G)" class="top-link" id="top-link" accesskey="g">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 6" fill="currentColor">
+        <path d="M12 6H0l6-6z" />
+    </svg>
+</a>
+
+<script>
+    let menu = document.getElementById('menu');
+    if (menu) {
+        
+        const scrollPosition = localStorage.getItem("menu-scroll-position");
+        if (scrollPosition) {
+            menu.scrollLeft = parseInt(scrollPosition, 10);
+        }
+        
+        menu.onscroll = function () {
+            localStorage.setItem("menu-scroll-position", menu.scrollLeft);
+        }
+    }
+
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener("click", function (e) {
+            e.preventDefault();
+            var id = this.getAttribute("href").substr(1);
+            if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView({
+                    behavior: "smooth"
+                });
+            } else {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView();
+            }
+            if (id === "top") {
+                history.replaceState(null, null, " ");
+            } else {
+                history.pushState(null, null, `#${id}`);
+            }
+        });
+    });
+
+</script>
+<script>
+    var mybutton = document.getElementById("top-link");
+    window.onscroll = function () {
+        if (document.body.scrollTop > 800 || document.documentElement.scrollTop > 800) {
+            mybutton.style.visibility = "visible";
+            mybutton.style.opacity = "1";
+        } else {
+            mybutton.style.visibility = "hidden";
+            mybutton.style.opacity = "0";
+        }
+    };
+
+</script>
+<script>
+    document.getElementById("theme-toggle").addEventListener("click", () => {
+        const html = document.querySelector("html");
+        if (html.dataset.theme === "dark") {
+            html.dataset.theme = 'light';
+            localStorage.setItem("pref-theme", 'light');
+        } else {
+            html.dataset.theme = 'dark';
+            localStorage.setItem("pref-theme", 'dark');
+        }
+    })
+
+</script>
+</body>
+
+</html>

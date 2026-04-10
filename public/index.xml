@@ -6,48 +6,529 @@
     <description>Recent content on My New Hugo Project</description>
     <generator>Hugo</generator>
     <language>en-us</language>
-    <lastBuildDate>Thu, 09 Apr 2026 20:27:38 +0800</lastBuildDate>
+    <lastBuildDate>Fri, 10 Apr 2026 09:52:11 +0800</lastBuildDate>
     <atom:link href="http://localhost:1313/index.xml" rel="self" type="application/rss+xml" />
     <item>
-      <title>Agent</title>
-      <link>http://localhost:1313/posts/agent/</link>
-      <pubDate>Thu, 09 Apr 2026 20:27:38 +0800</pubDate>
-      <guid>http://localhost:1313/posts/agent/</guid>
-      <description>&lt;ol&gt;
-&lt;li&gt;什么是 ReAct 框架？
-ReAct = Reason（推理/思考） + Act（行动）。
-在没有 ReAct 之前，大语言模型的工作方式有两种极端：
-只思考不行动（如传统的思维链 Chain-of-Thought, CoT）： 就像一个被关在小黑屋里的诸葛亮，算无遗策，但他没法上网查今天的最新数据。一旦他的内置知识有盲区，他就会靠“脑补”产生幻觉。
-只行动不思考： 就像一个冲动的莽汉，拿到任务就盲目地去调用各种工具，疯狂试错，最后把自己绕晕，无法解决复杂的连环问题。
-ReAct 框架巧妙地将这两者结合在了一起，让 Agent 像一个谨慎严谨的侦探一样，走一步、看一步、想一步。&lt;/li&gt;
+      <title>Openhand_overview</title>
+      <link>http://localhost:1313/posts/openhand_overview/</link>
+      <pubDate>Fri, 10 Apr 2026 09:52:11 +0800</pubDate>
+      <guid>http://localhost:1313/posts/openhand_overview/</guid>
+      <description>&lt;h2 id=&#34;文档索引&#34;&gt;文档索引&lt;/h2&gt;
+&lt;table&gt;
+  &lt;thead&gt;
+      &lt;tr&gt;
+          &lt;th&gt;文档&lt;/th&gt;
+          &lt;th&gt;内容&lt;/th&gt;
+      &lt;/tr&gt;
+  &lt;/thead&gt;
+  &lt;tbody&gt;
+      &lt;tr&gt;
+          &lt;td&gt;&lt;strong&gt;tutorial.md&lt;/strong&gt;&lt;/td&gt;
+          &lt;td&gt;项目概述、架构、面试指南&lt;/td&gt;
+      &lt;/tr&gt;
+      &lt;tr&gt;
+          &lt;td&gt;&lt;strong&gt;&lt;a href=&#34;./tutorial_agent.md&#34;&gt;tutorial_agent.md&lt;/a&gt;&lt;/strong&gt;&lt;/td&gt;
+          &lt;td&gt;Agent 详解：CodeAct、工具、多智能体、MCP、Skills&lt;/td&gt;
+      &lt;/tr&gt;
+      &lt;tr&gt;
+          &lt;td&gt;&lt;strong&gt;&lt;a href=&#34;./tutorial_controller.md&#34;&gt;tutorial_controller.md&lt;/a&gt;&lt;/strong&gt;&lt;/td&gt;
+          &lt;td&gt;Controller 详解：主循环、状态管理、委托、循环检测&lt;/td&gt;
+      &lt;/tr&gt;
+      &lt;tr&gt;
+          &lt;td&gt;&lt;strong&gt;&lt;a href=&#34;./tutorial_event_stream.md&#34;&gt;tutorial_event_stream.md&lt;/a&gt;&lt;/strong&gt;&lt;/td&gt;
+          &lt;td&gt;EventStream 详解：事件流、发布-订阅、持久化&lt;/td&gt;
+      &lt;/tr&gt;
+      &lt;tr&gt;
+          &lt;td&gt;&lt;strong&gt;&lt;a href=&#34;./tutorial_runtime.md&#34;&gt;tutorial_runtime.md&lt;/a&gt;&lt;/strong&gt;&lt;/td&gt;
+          &lt;td&gt;Runtime 详解：沙箱、Docker、执行机制、预热池&lt;/td&gt;
+      &lt;/tr&gt;
+  &lt;/tbody&gt;
+&lt;/table&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;项目概述&#34;&gt;项目概述&lt;/h2&gt;
+&lt;p&gt;&lt;strong&gt;OpenHands&lt;/strong&gt; 是一个 AI 原生的软件工程智能体平台，可以让 AI 像人类开发者一样完成各种软件工程任务，如编写代码、运行命令、浏览网页、操作 Git 仓库等。&lt;/p&gt;
+&lt;h3 id=&#34;openhands-能做什么&#34;&gt;OpenHands 能做什么？&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;自动化代码开发&lt;/strong&gt;：编写、修改、重构代码&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Bug 修复&lt;/strong&gt;：分析和修复代码问题&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;代码审查&lt;/strong&gt;：审查 Pull Request&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;自动化测试&lt;/strong&gt;：运行和编写测试&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;技术调研&lt;/strong&gt;：搜索文档、阅读代码库&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;发布准备&lt;/strong&gt;：提交代码、创建 PR&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id=&#34;应用场景&#34;&gt;应用场景&lt;/h3&gt;
+&lt;table&gt;
+  &lt;thead&gt;
+      &lt;tr&gt;
+          &lt;th&gt;场景&lt;/th&gt;
+          &lt;th&gt;说明&lt;/th&gt;
+      &lt;/tr&gt;
+  &lt;/thead&gt;
+  &lt;tbody&gt;
+      &lt;tr&gt;
+          &lt;td&gt;&lt;strong&gt;本地开发&lt;/strong&gt;&lt;/td&gt;
+          &lt;td&gt;通过 CLI 或 GUI 与 OpenHands 交互&lt;/td&gt;
+      &lt;/tr&gt;
+      &lt;tr&gt;
+          &lt;td&gt;&lt;strong&gt;云端服务&lt;/strong&gt;&lt;/td&gt;
+          &lt;td&gt;托管在云端的服务，支持 Slack、Jira 集成&lt;/td&gt;
+      &lt;/tr&gt;
+      &lt;tr&gt;
+          &lt;td&gt;&lt;strong&gt;企业部署&lt;/strong&gt;&lt;/td&gt;
+          &lt;td&gt;支持 Kubernetes 私有化部署&lt;/td&gt;
+      &lt;/tr&gt;
+      &lt;tr&gt;
+          &lt;td&gt;&lt;strong&gt;SDK 集成&lt;/strong&gt;&lt;/td&gt;
+          &lt;td&gt;通过 Python SDK 构建自己的 AI 应用&lt;/td&gt;
+      &lt;/tr&gt;
+  &lt;/tbody&gt;
+&lt;/table&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;系统架构&#34;&gt;系统架构&lt;/h2&gt;
+&lt;h3 id=&#34;整体架构图&#34;&gt;整体架构图&lt;/h3&gt;
+&lt;pre tabindex=&#34;0&#34;&gt;&lt;code&gt;┌─────────────────────────────────────────────────────────────────┐
+│                         用户界面层                                │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐        │
+│  │  CLI     │  │  Web GUI  │  │  Slack   │  │   SDK    │        │
+│  └────┬─────┘  └────┬─────┘  └────┬─────┘  └────┬─────┘        │
+└───────┼─────────────┼─────────────┼─────────────┼───────────────┘
+        │             │             │             │
+        v             v             v             v
+┌─────────────────────────────────────────────────────────────────┐
+│                        服务层 (App Server)                       │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │              Conversation Manager (会话管理)              │   │
+│  └──────────────────────────────────────────────────────────┘   │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐              │
+│  │  Sandbox    │  │   Event     │  │   User      │              │
+│  │  Service    │  │   Service   │  │   Service   │              │
+│  └──────┬──────┘  └──────┬──────┘  └─────────────┘              │
+└─────────┼────────────────┼──────────────────────────────────────┘
+          │                │
+          v                v
+┌─────────────────────────────────────────────────────────────────┐
+│                      智能体层 (Agent Core)                       │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │                  AgentController                          │   │
+│  │                  (智能体控制器)                            │   │
+│  └──────────────────────────────────────────────────────────┘   │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐              │
+│  │   Agent     │  │    LLM      │  │   Event     │              │
+│  │  (智能体)    │  │  (大模型)    │  │  Stream     │              │
+│  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘              │
+└─────────┼────────────────┼────────────────┼─────────────────────┘
+          │                │                │
+          v                v                v
+┌─────────────────────────────────────────────────────────────────┐
+│                      运行时层 (Runtime)                          │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │              Action Execution Server                     │   │
+│  │              (动作执行服务器)                              │   │
+│  └──────────────────────────────────────────────────────────┘   │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐              │
+│  │   Docker    │  │  IPython    │  │  Browser    │              │
+│  │  (容器)      │  │  (代码执行)  │  │  (浏览)      │              │
+│  └─────────────┘  └─────────────┘  └─────────────┘              │
+└─────────────────────────────────────────────────────────────────┘
+&lt;/code&gt;&lt;/pre&gt;&lt;h3 id=&#34;核心组件&#34;&gt;核心组件&lt;/h3&gt;
+&lt;h4 id=&#34;1-智能体-agent&#34;&gt;1. 智能体 (Agent)&lt;/h4&gt;
+&lt;p&gt;智能体是 OpenHands 的&amp;quot;大脑&amp;quot;，负责：&lt;/p&gt;</description>
+    </item>
+    <item>
+      <title>Openhand_controller</title>
+      <link>http://localhost:1313/posts/openhand_controller/</link>
+      <pubDate>Fri, 10 Apr 2026 09:51:58 +0800</pubDate>
+      <guid>http://localhost:1313/posts/openhand_controller/</guid>
+      <description>&lt;h2 id=&#34;目录&#34;&gt;目录&lt;/h2&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;a href=&#34;#1-%E6%A6%82%E8%BF%B0&#34;&gt;概述&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;#2-agentcontroller-%E6%A0%B8%E5%BF%83%E7%BB%93%E6%9E%84&#34;&gt;AgentController 核心结构&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;#3-%E7%8A%B6%E6%80%81%E7%AE%A1%E7%90%86&#34;&gt;状态管理&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;#4-%E4%B8%BB%E5%BE%AA%E7%8E%AF%E5%AE%9E%E7%8E%B0&#34;&gt;主循环实现&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;#5-%E4%BA%8B%E4%BB%B6%E6%B5%81%E9%9B%86%E6%88%90&#34;&gt;事件流集成&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;#6-%E5%A7%94%E6%89%98%E5%A4%9A%E6%99%BA%E8%83%BD%E4%BD%93%E7%B3%BB%E7%BB%9F&#34;&gt;委托/多智能体系统&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;#7-%E5%BE%AA%E7%8E%AF%E6%A3%80%E6%B5%8B%E4%B8%8E%E9%94%99%E8%AF%AF%E5%A4%84%E7%90%86&#34;&gt;循环检测与错误处理&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;#8-%E9%85%8D%E7%BD%AE%E7%B3%BB%E7%BB%9F&#34;&gt;配置系统&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;#9-%E6%9E%B6%E6%9E%84%E6%B5%81%E7%A8%8B%E5%9B%BE&#34;&gt;架构流程图&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;#10-%E9%9D%A2%E8%AF%95%E9%97%AE%E9%A2%98&#34;&gt;面试问题&lt;/a&gt;&lt;/li&gt;
 &lt;/ol&gt;
 &lt;hr&gt;
-&lt;ol start=&#34;2&#34;&gt;
-&lt;li&gt;ReAct 的核心运转机制：“TAO”循环
-ReAct 的魔法在于它定义了一个极其经典的执行循环，我们通常称之为 TAO 循环。这三个字母分别代表：
-🤔 Thought（思考）： Agent 首先会分析当前的任务状态，并推断出下一步需要做什么。
-（内心OS：“用户问我 2026 年奥斯卡最佳影片导演的年龄，我得先找出这部电影的名字，然后再查导演是谁，最后查他的出生年份。”）
-🛠️ Action（行动）： 基于刚才的思考，Agent 决定调用工具箱里的某个工具，并传入具体的参数。
-（动作：调用【搜索引擎】工具，搜索关键词：“2026 奥斯卡最佳影片”）
-👀 Observation（观察）： 工具执行完毕后，Agent 会获取外部世界的真实反馈结果。
-（反馈结果：搜索页面显示，2026年奥斯卡最佳影片是《某某电影》。）
-完成一次 TAO 循环后，Agent 不会停下，而是把这次的“观察”结果作为新的上下文，开启下一轮的“思考”，直到最终拿到可以回答用户的完整答案。&lt;/li&gt;
+&lt;h2 id=&#34;1-概述&#34;&gt;1. 概述&lt;/h2&gt;
+&lt;h3 id=&#34;11-什么是-agentcontroller&#34;&gt;1.1 什么是 AgentController&lt;/h3&gt;
+&lt;p&gt;&lt;strong&gt;AgentController&lt;/strong&gt; 是 OpenHands 的&amp;quot;引擎&amp;quot;，负责：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;驱动智能体的主循环&lt;/li&gt;
+&lt;li&gt;管理任务状态&lt;/li&gt;
+&lt;li&gt;协调各组件通信&lt;/li&gt;
+&lt;li&gt;处理异常和循环检测&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;文件&lt;/strong&gt;: &lt;code&gt;/home/gdw/tutorial/OpenHands/openhands/controller/agent_controller.py&lt;/code&gt;&lt;/p&gt;
+&lt;h3 id=&#34;12-核心职责&#34;&gt;1.2 核心职责&lt;/h3&gt;
+&lt;pre tabindex=&#34;0&#34;&gt;&lt;code&gt;AgentController
+    │
+    ├── 主循环驱动 (_step)
+    ├── 状态管理 (StateTracker)
+    ├── 事件路由 (EventStream)
+    ├── 委托管理 (Delegate)
+    ├── 循环检测 (StuckDetector)
+    ├── 安全分析 (SecurityAnalyzer)
+    └── 配置控制 (ControlFlags)
+&lt;/code&gt;&lt;/pre&gt;&lt;hr&gt;
+&lt;h2 id=&#34;2-agentcontroller-核心结构&#34;&gt;2. AgentController 核心结构&lt;/h2&gt;
+&lt;h3 id=&#34;21-类定义&#34;&gt;2.1 类定义&lt;/h3&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;&#34;&gt;&lt;code class=&#34;language-python&#34; data-lang=&#34;python&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;AgentController&lt;/span&gt;:
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    id: str
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    agent: Agent
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    max_iterations: int
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    event_stream: EventStream
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    state: State
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    confirmation_mode: bool
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    agent_to_llm_config: dict[str, LLMConfig]
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    agent_configs: dict[str, AgentConfig]
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    parent: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;AgentController | None&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;None&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    delegate: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;AgentController | None&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;None&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    _pending_action_info: tuple[Action, float] &lt;span style=&#34;color:#f92672&#34;&gt;|&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;None&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;None&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    _closed: bool &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;False&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h3 id=&#34;22-初始化流程&#34;&gt;2.2 初始化流程&lt;/h3&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;&#34;&gt;&lt;code class=&#34;language-python&#34; data-lang=&#34;python&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;def&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;__init__&lt;/span&gt;(
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    self,
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    agent: Agent,
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    event_stream: EventStream,
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    conversation_stats: ConversationStats,
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    iteration_delta: int,  &lt;span style=&#34;color:#75715e&#34;&gt;# 最大迭代次数&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    budget_per_task_delta: float &lt;span style=&#34;color:#f92672&#34;&gt;|&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;None&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;None&lt;/span&gt;,  &lt;span style=&#34;color:#75715e&#34;&gt;# 最大预算&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    agent_to_llm_config: dict[str, LLMConfig] &lt;span style=&#34;color:#f92672&#34;&gt;|&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;None&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;None&lt;/span&gt;,
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    agent_configs: dict[str, AgentConfig] &lt;span style=&#34;color:#f92672&#34;&gt;|&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;None&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;None&lt;/span&gt;,
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    sid: str &lt;span style=&#34;color:#f92672&#34;&gt;|&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;None&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;None&lt;/span&gt;,
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    file_store: FileStore &lt;span style=&#34;color:#f92672&#34;&gt;|&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;None&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;None&lt;/span&gt;,
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    user_id: str &lt;span style=&#34;color:#f92672&#34;&gt;|&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;None&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;None&lt;/span&gt;,
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    confirmation_mode: bool &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;False&lt;/span&gt;,
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    initial_state: State &lt;span style=&#34;color:#f92672&#34;&gt;|&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;None&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;None&lt;/span&gt;,
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    is_delegate: bool &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;False&lt;/span&gt;,
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    headless_mode: bool &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;True&lt;/span&gt;,
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    status_callback: Callable &lt;span style=&#34;color:#f92672&#34;&gt;|&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;None&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;None&lt;/span&gt;,
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    replay_events: list[Event] &lt;span style=&#34;color:#f92672&#34;&gt;|&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;None&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;None&lt;/span&gt;,
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    security_analyzer: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;SecurityAnalyzer | None&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;None&lt;/span&gt;,
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;):
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;&lt;strong&gt;初始化步骤&lt;/strong&gt;：&lt;/p&gt;</description>
+    </item>
+    <item>
+      <title>Openhand_runtime</title>
+      <link>http://localhost:1313/posts/openhand_runtime/</link>
+      <pubDate>Fri, 10 Apr 2026 09:51:52 +0800</pubDate>
+      <guid>http://localhost:1313/posts/openhand_runtime/</guid>
+      <description>&lt;h2 id=&#34;目录&#34;&gt;目录&lt;/h2&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;a href=&#34;#1-%E6%A6%82%E8%BF%B0&#34;&gt;概述&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;#2-base-runtime-%E6%8A%BD%E8%B1%A1%E6%8E%A5%E5%8F%A3&#34;&gt;Base Runtime 抽象接口&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;#3-dockerruntime-%E5%AE%9E%E7%8E%B0&#34;&gt;DockerRuntime 实现&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;#4-localruntime-%E5%AE%9E%E7%8E%B0&#34;&gt;LocalRuntime 实现&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;#5-remoteruntime-%E4%B8%8E-kubernetesruntime&#34;&gt;RemoteRuntime 与 KubernetesRuntime&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;#6-action-execution-server&#34;&gt;Action Execution Server&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;#7-%E5%8A%A8%E4%BD%9C%E6%89%A7%E8%A1%8C%E6%9C%BA%E5%88%B6&#34;&gt;动作执行机制&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;#8-%E6%B2%99%E7%AE%B1%E7%AE%A1%E7%90%86&#34;&gt;沙箱管理&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;#9-%E5%AE%89%E5%85%A8%E6%9C%BA%E5%88%B6&#34;&gt;安全机制&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;#10-%E6%9E%B6%E6%9E%84%E6%B5%81%E7%A8%8B%E5%9B%BE&#34;&gt;架构流程图&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;#11-%E9%9D%A2%E8%AF%95%E9%97%AE%E9%A2%98&#34;&gt;面试问题&lt;/a&gt;&lt;/li&gt;
 &lt;/ol&gt;
 &lt;hr&gt;
-&lt;ol start=&#34;3&#34;&gt;
-&lt;li&gt;一个生动的例子：做一道复杂的菜
-想象一下你在厨房做一道从未做过的菜。
-如果你只用思维链（单纯思考），你会在脑子里想：“先把肉切了，然后下锅炒，然后加盐，最后出锅”。一旦火候不对或者锅底烧焦，因为你闭着眼睛没去看，最后菜就毁了。
-如果你用的是 ReAct（思考+行动+观察），你的过程是这样的：
-Thought（思考）： 菜谱上说先把油烧热，我得去开火。
-Action（行动）： 扭动燃气灶开关（调用物理动作）。
-Observation（观察）： 看到火苗出来了，锅底开始冒一点青烟。
-Thought（思考）： 锅热了，现在该把肉放进去了，但我得小心别被油溅到。
-Action（行动）： 把肉倒进锅里，迅速拿锅盖挡住（调用防守动作）。
-Observation（观察）： 听到“刺啦”一声，肉变色了。
-&amp;hellip;（循环继续，直到菜品出锅）
-通过这种交替进行的模式，Agent 就不再是凭空想象，而是将自己的推理牢牢锚定在外部世界的客观事实（观察结果）上。这极大减少了幻觉，并让它能够解决那些需要多步嵌套、中途需要根据情况动态调整策略的复杂问题。&lt;/li&gt;
-&lt;/ol&gt;</description>
+&lt;h2 id=&#34;1-概述&#34;&gt;1. 概述&lt;/h2&gt;
+&lt;h3 id=&#34;11-什么是-runtime&#34;&gt;1.1 什么是 Runtime&lt;/h3&gt;
+&lt;p&gt;&lt;strong&gt;Runtime&lt;/strong&gt; 是 OpenHands 的&amp;quot;手脚&amp;quot;，负责在实际隔离环境中执行 Agent 生成的 Action。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;文件&lt;/strong&gt;: &lt;code&gt;/home/gdw/tutorial/OpenHands/openhands/runtime/&lt;/code&gt;&lt;/p&gt;
+&lt;h3 id=&#34;12-runtime-职责&#34;&gt;1.2 Runtime 职责&lt;/h3&gt;
+&lt;pre tabindex=&#34;0&#34;&gt;&lt;code&gt;Runtime
+    │
+    ├── 执行 Bash 命令
+    ├── 执行 Python 代码 (IPython/Jupyter)
+    ├── 文件系统操作 (读/写/编辑)
+    ├── 浏览器自动化
+    ├── MCP 工具调用
+    └── 环境隔离
+&lt;/code&gt;&lt;/pre&gt;&lt;h3 id=&#34;13-运行时类型&#34;&gt;1.3 运行时类型&lt;/h3&gt;
+&lt;table&gt;
+  &lt;thead&gt;
+      &lt;tr&gt;
+          &lt;th&gt;运行时&lt;/th&gt;
+          &lt;th&gt;说明&lt;/th&gt;
+      &lt;/tr&gt;
+  &lt;/thead&gt;
+  &lt;tbody&gt;
+      &lt;tr&gt;
+          &lt;td&gt;&lt;strong&gt;DockerRuntime&lt;/strong&gt;&lt;/td&gt;
+          &lt;td&gt;Docker 容器隔离（默认）&lt;/td&gt;
+      &lt;/tr&gt;
+      &lt;tr&gt;
+          &lt;td&gt;&lt;strong&gt;LocalRuntime&lt;/strong&gt;&lt;/td&gt;
+          &lt;td&gt;本地机器执行（无隔离）&lt;/td&gt;
+      &lt;/tr&gt;
+      &lt;tr&gt;
+          &lt;td&gt;&lt;strong&gt;RemoteRuntime&lt;/strong&gt;&lt;/td&gt;
+          &lt;td&gt;连接远程运行时服务器&lt;/td&gt;
+      &lt;/tr&gt;
+      &lt;tr&gt;
+          &lt;td&gt;&lt;strong&gt;KubernetesRuntime&lt;/strong&gt;&lt;/td&gt;
+          &lt;td&gt;K8s 集群中执行&lt;/td&gt;
+      &lt;/tr&gt;
+  &lt;/tbody&gt;
+&lt;/table&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;2-base-runtime-抽象接口&#34;&gt;2. Base Runtime 抽象接口&lt;/h2&gt;
+&lt;h3 id=&#34;21-runtime-基类&#34;&gt;2.1 Runtime 基类&lt;/h3&gt;
+&lt;p&gt;&lt;strong&gt;文件&lt;/strong&gt;: &lt;code&gt;/home/gdw/tutorial/OpenHands/openhands/runtime/base.py&lt;/code&gt;&lt;/p&gt;</description>
+    </item>
+    <item>
+      <title>Openhand_memory</title>
+      <link>http://localhost:1313/posts/openhand_memory/</link>
+      <pubDate>Fri, 10 Apr 2026 09:51:46 +0800</pubDate>
+      <guid>http://localhost:1313/posts/openhand_memory/</guid>
+      <description>&lt;h2 id=&#34;概述&#34;&gt;概述&lt;/h2&gt;
+&lt;p&gt;OpenHands 的记忆系统是一个多层次的系统，负责管理 AI Agent 的信息检索和对话历史处理。它使 Agent 能够在执行任务时记住重要的上下文信息，并根据需要检索知识。&lt;/p&gt;
+&lt;p&gt;记忆系统主要由三个核心组件构成：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;Memory&lt;/strong&gt; (&lt;code&gt;openhands/memory/memory.py&lt;/code&gt;) - 处理召回动作和微代理知识检索&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;ConversationMemory&lt;/strong&gt; (&lt;code&gt;openhands/memory/conversation_memory.py&lt;/code&gt;) - 将事件流转换为 LLM 可用的消息格式&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Condenser&lt;/strong&gt; (&lt;code&gt;openhands/memory/condenser/&lt;/code&gt;) - 当对话历史过长时进行压缩和摘要&lt;/li&gt;
+&lt;/ol&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;1-recall-类型&#34;&gt;1. Recall 类型&lt;/h2&gt;
+&lt;p&gt;OpenHands 定义了两种召回类型，用于区分不同来源的记忆检索：&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;&#34;&gt;&lt;code class=&#34;language-python&#34; data-lang=&#34;python&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;# openhands/events/recall_type.py&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;RecallType&lt;/span&gt;(str, Enum):
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    WORKSPACE_CONTEXT &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;workspace_context&amp;#39;&lt;/span&gt;  &lt;span style=&#34;color:#75715e&#34;&gt;# 工作区上下文（仓库、运行时等）&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    KNOWLEDGE &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;knowledge&amp;#39;&lt;/span&gt;                  &lt;span style=&#34;color:#75715e&#34;&gt;# 知识微代理触发&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;table&gt;
+  &lt;thead&gt;
+      &lt;tr&gt;
+          &lt;th&gt;类型&lt;/th&gt;
+          &lt;th&gt;触发方式&lt;/th&gt;
+          &lt;th&gt;用途&lt;/th&gt;
+      &lt;/tr&gt;
+  &lt;/thead&gt;
+  &lt;tbody&gt;
+      &lt;tr&gt;
+          &lt;td&gt;&lt;code&gt;WORKSPACE_CONTEXT&lt;/code&gt;&lt;/td&gt;
+          &lt;td&gt;用户消息附带召回请求&lt;/td&gt;
+          &lt;td&gt;获取仓库信息、运行时环境、对话指令&lt;/td&gt;
+      &lt;/tr&gt;
+      &lt;tr&gt;
+          &lt;td&gt;&lt;code&gt;KNOWLEDGE&lt;/code&gt;&lt;/td&gt;
+          &lt;td&gt;匹配知识微代理的关键词&lt;/td&gt;
+          &lt;td&gt;检索用户自定义的知识库&lt;/td&gt;
+      &lt;/tr&gt;
+  &lt;/tbody&gt;
+&lt;/table&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;2-微代理-microagent-系统&#34;&gt;2. 微代理 (Microagent) 系统&lt;/h2&gt;
+&lt;p&gt;微代理是 OpenHands 记忆系统的重要组成部分，允许用户定义可被动态检索的知识片段。&lt;/p&gt;
+&lt;h3 id=&#34;21-微代理类型&#34;&gt;2.1 微代理类型&lt;/h3&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;&#34;&gt;&lt;code class=&#34;language-python&#34; data-lang=&#34;python&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;# openhands/microagent/types.py&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;MicroagentType&lt;/span&gt;(str, Enum):
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    KNOWLEDGE &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;knowledge&amp;#39;&lt;/span&gt;       &lt;span style=&#34;color:#75715e&#34;&gt;# 关键词触发型知识&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    REPO_KNOWLEDGE &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;repo_knowledge&amp;#39;&lt;/span&gt;  &lt;span style=&#34;color:#75715e&#34;&gt;# 仓库级知识，始终激活&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    TASK &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;task&amp;#39;&lt;/span&gt;                 &lt;span style=&#34;color:#75715e&#34;&gt;# 任务型，需要用户输入&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;table&gt;
+  &lt;thead&gt;
+      &lt;tr&gt;
+          &lt;th&gt;类型&lt;/th&gt;
+          &lt;th&gt;描述&lt;/th&gt;
+          &lt;th&gt;触发方式&lt;/th&gt;
+      &lt;/tr&gt;
+  &lt;/thead&gt;
+  &lt;tbody&gt;
+      &lt;tr&gt;
+          &lt;td&gt;&lt;code&gt;KNOWLEDGE&lt;/code&gt;&lt;/td&gt;
+          &lt;td&gt;可选微代理&lt;/td&gt;
+          &lt;td&gt;对话中包含关键词时触发&lt;/td&gt;
+      &lt;/tr&gt;
+      &lt;tr&gt;
+          &lt;td&gt;&lt;code&gt;REPO_KNOWLEDGE&lt;/code&gt;&lt;/td&gt;
+          &lt;td&gt;仓库级知识&lt;/td&gt;
+          &lt;td&gt;始终加载，提供仓库特定信息&lt;/td&gt;
+      &lt;/tr&gt;
+      &lt;tr&gt;
+          &lt;td&gt;&lt;code&gt;TASK&lt;/code&gt;&lt;/td&gt;
+          &lt;td&gt;任务型&lt;/td&gt;
+          &lt;td&gt;需要用户通过 &lt;code&gt;/agent_name&lt;/code&gt; 命令调用&lt;/td&gt;
+      &lt;/tr&gt;
+  &lt;/tbody&gt;
+&lt;/table&gt;
+&lt;h3 id=&#34;22-微代理存储位置&#34;&gt;2.2 微代理存储位置&lt;/h3&gt;
+&lt;p&gt;微代理从以下位置加载：&lt;/p&gt;</description>
+    </item>
+    <item>
+      <title>Openhand_event_stream</title>
+      <link>http://localhost:1313/posts/openhand_event_stream/</link>
+      <pubDate>Fri, 10 Apr 2026 09:51:41 +0800</pubDate>
+      <guid>http://localhost:1313/posts/openhand_event_stream/</guid>
+      <description>&lt;h2 id=&#34;目录&#34;&gt;目录&lt;/h2&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;a href=&#34;#1-%E6%A6%82%E8%BF%B0&#34;&gt;概述&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;#2-event-%E7%B1%BB%E5%B1%82%E6%AC%A1%E7%BB%93%E6%9E%84&#34;&gt;Event 类层次结构&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;#3-eventstream-%E5%AE%9E%E7%8E%B0&#34;&gt;EventStream 实现&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;#4-eventstore-%E6%8C%81%E4%B9%85%E5%8C%96&#34;&gt;EventStore 持久化&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;#5-%E5%8F%91%E5%B8%83-%E8%AE%A2%E9%98%85%E6%9C%BA%E5%88%B6&#34;&gt;发布-订阅机制&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;#6-%E4%BA%8B%E4%BB%B6%E6%B5%81%E8%BD%AC&#34;&gt;事件流转&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;#7-%E4%BA%8B%E4%BB%B6%E5%BA%8F%E5%88%97%E5%8C%96&#34;&gt;事件序列化&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;#8-%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F&#34;&gt;设计模式&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;#9-%E6%9E%B6%E6%9E%84%E6%B5%81%E7%A8%8B%E5%9B%BE&#34;&gt;架构流程图&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;#10-%E9%9D%A2%E8%AF%95%E9%97%AE%E9%A2%98&#34;&gt;面试问题&lt;/a&gt;&lt;/li&gt;
+&lt;/ol&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;1-概述&#34;&gt;1. 概述&lt;/h2&gt;
+&lt;h3 id=&#34;11-什么是-eventstream&#34;&gt;1.1 什么是 EventStream&lt;/h3&gt;
+&lt;p&gt;&lt;strong&gt;EventStream&lt;/strong&gt; 是 OpenHands 的&lt;strong&gt;中央消息总线&lt;/strong&gt;，采用发布-订阅（Pub/Sub）模式连接所有组件。&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;文件&lt;/strong&gt;: &lt;code&gt;/home/gdw/tutorial/OpenHands/openhands/events/stream.py&lt;/code&gt;&lt;/p&gt;
+&lt;h3 id=&#34;12-核心功能&#34;&gt;1.2 核心功能&lt;/h3&gt;
+&lt;pre tabindex=&#34;0&#34;&gt;&lt;code&gt;EventStream
+    │
+    ├── 发布/订阅机制
+    ├── 事件持久化
+    ├── 异步事件分发
+    ├── 秘密替换
+    └── 写缓存优化
+&lt;/code&gt;&lt;/pre&gt;&lt;hr&gt;
+&lt;h2 id=&#34;2-event-类层次结构&#34;&gt;2. Event 类层次结构&lt;/h2&gt;
+&lt;h3 id=&#34;21-基类-event&#34;&gt;2.1 基类 Event&lt;/h3&gt;
+&lt;p&gt;&lt;strong&gt;文件&lt;/strong&gt;: &lt;code&gt;/home/gdw/tutorial/OpenHands/openhands/events/event.py&lt;/code&gt;&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;&#34;&gt;&lt;code class=&#34;language-python&#34; data-lang=&#34;python&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;@dataclass&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;Event&lt;/span&gt;:
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    INVALID_ID &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;-&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    &lt;span style=&#34;color:#75715e&#34;&gt;# 属性&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    id: int                      &lt;span style=&#34;color:#75715e&#34;&gt;# 唯一标识&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    timestamp: str                &lt;span style=&#34;color:#75715e&#34;&gt;# ISO 时间戳&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    source: EventSource           &lt;span style=&#34;color:#75715e&#34;&gt;# 来源 (AGENT/USER/ENVIRONMENT)&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    cause: int                    &lt;span style=&#34;color:#75715e&#34;&gt;# 触发事件的 ID&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    timeout: float &lt;span style=&#34;color:#f92672&#34;&gt;|&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;None&lt;/span&gt;         &lt;span style=&#34;color:#75715e&#34;&gt;# 超时时间&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h3 id=&#34;22-eventsource-枚举&#34;&gt;2.2 EventSource 枚举&lt;/h3&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;&#34;&gt;&lt;code class=&#34;language-python&#34; data-lang=&#34;python&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;EventSource&lt;/span&gt;(str, Enum):
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    AGENT &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;agent&amp;#39;&lt;/span&gt;          &lt;span style=&#34;color:#75715e&#34;&gt;# 智能体发出&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    USER &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;user&amp;#39;&lt;/span&gt;            &lt;span style=&#34;color:#75715e&#34;&gt;# 用户发出&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    ENVIRONMENT &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;environment&amp;#39;&lt;/span&gt;  &lt;span style=&#34;color:#75715e&#34;&gt;# 环境发出&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h3 id=&#34;23-action-和-observation&#34;&gt;2.3 Action 和 Observation&lt;/h3&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;&#34;&gt;&lt;code class=&#34;language-python&#34; data-lang=&#34;python&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;# Action - 智能体发出的动作请求&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;@dataclass&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;Action&lt;/span&gt;(Event):
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    runnable: ClassVar[bool] &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;False&lt;/span&gt;  &lt;span style=&#34;color:#75715e&#34;&gt;# 是否可执行&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;# Observation - 执行结果&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;@dataclass&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;Observation&lt;/span&gt;(Event):
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    content: str  &lt;span style=&#34;color:#75715e&#34;&gt;# 结果内容&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h3 id=&#34;24-完整事件层次&#34;&gt;2.4 完整事件层次&lt;/h3&gt;
+&lt;pre tabindex=&#34;0&#34;&gt;&lt;code&gt;Event (基类)
+├── Action (动作请求)
+│   ├── CmdRunAction           # 运行命令
+│   ├── IPythonRunCellAction   # 运行 Python
+│   ├── BrowseURLAction        # 浏览 URL
+│   ├── BrowseInteractiveAction # 交互浏览
+│   ├── FileReadAction         # 读文件
+│   ├── FileWriteAction        # 写文件
+│   ├── FileEditAction         # 编辑文件
+│   ├── MCPAction              # MCP 工具调用
+│   ├── MessageAction          # 消息
+│   ├── AgentThinkAction       # 思考
+│   ├── AgentFinishAction      # 完成任务
+│   ├── AgentRejectAction      # 拒绝任务
+│   ├── AgentDelegateAction    # 委托
+│   ├── CondensationRequestAction  # 请求压缩
+│   └── NullAction             # 空动作
+│
+└── Observation (执行结果)
+    ├── CmdOutputObservation    # 命令输出
+    ├── IPythonRunCellObservation
+    ├── BrowserOutputObservation
+    ├── FileReadObservation
+    ├── ErrorObservation        # 错误
+    ├── SuccessObservation      # 成功
+    ├── AgentDelegateObservation # 委托结果
+    ├── MCPObservation         # MCP 结果
+    ├── RecallObservation      # 记忆检索
+    └── NullObservation         # 空观察
+&lt;/code&gt;&lt;/pre&gt;&lt;h3 id=&#34;25-关键-action-类&#34;&gt;2.5 关键 Action 类&lt;/h3&gt;
+&lt;p&gt;&lt;strong&gt;文件&lt;/strong&gt;: &lt;code&gt;/home/gdw/tutorial/OpenHands/openhands/events/action/commands.py&lt;/code&gt;&lt;/p&gt;</description>
+    </item>
+    <item>
+      <title>Openhands Agent浅析</title>
+      <link>http://localhost:1313/posts/openhands_agent/</link>
+      <pubDate>Fri, 10 Apr 2026 09:47:47 +0800</pubDate>
+      <guid>http://localhost:1313/posts/openhands_agent/</guid>
+      <description>&lt;h2 id=&#34;目录&#34;&gt;目录&lt;/h2&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;a href=&#34;#1-agent-%E6%A6%82%E8%BF%B0&#34;&gt;Agent 概述&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;#2-agent-%E5%9F%BA%E7%B1%BB%E8%AE%BE%E8%AE%A1&#34;&gt;Agent 基类设计&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;#3-codeactagent-%E8%AF%A6%E8%A7%A3&#34;&gt;CodeActAgent 详解&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;#4-%E5%B7%A5%E5%85%B7%E7%B3%BB%E7%BB%9F&#34;&gt;工具系统&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;#5-%E5%A4%9A%E6%99%BA%E8%83%BD%E4%BD%93%E6%A8%A1%E5%BC%8F&#34;&gt;多智能体模式&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;#6-skills-%E7%B3%BB%E7%BB%9F&#34;&gt;Skills 系统&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;#7-mcp-%E9%9B%86%E6%88%90&#34;&gt;MCP 集成&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;#8-microagent-%E5%BE%AE%E6%99%BA%E8%83%BD%E4%BD%93&#34;&gt;Microagent 微智能体&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;#9-%E6%9E%B6%E6%9E%84%E5%9B%BE&#34;&gt;架构图&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;#10-%E9%9D%A2%E8%AF%95%E9%97%AE%E9%A2%98&#34;&gt;面试问题&lt;/a&gt;&lt;/li&gt;
+&lt;/ol&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;1-agent-概述&#34;&gt;1. Agent 概述&lt;/h2&gt;
+&lt;h3 id=&#34;11-什么是-agent&#34;&gt;1.1 什么是 Agent&lt;/h3&gt;
+&lt;p&gt;在 OpenHands 中，&lt;strong&gt;Agent（智能体）&lt;/strong&gt; 是整个系统的&amp;quot;大脑&amp;quot;。它负责：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;理解用户任务&lt;/li&gt;
+&lt;li&gt;制定执行计划&lt;/li&gt;
+&lt;li&gt;生成具体动作（Action）&lt;/li&gt;
+&lt;li&gt;决定何时完成任务&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Agent 基于大语言模型（LLM）实现，通过 &lt;code&gt;step()&lt;/code&gt; 方法驱动每次决策。&lt;/p&gt;
+&lt;h3 id=&#34;12-agent-类型&#34;&gt;1.2 Agent 类型&lt;/h3&gt;
+&lt;table&gt;
+  &lt;thead&gt;
+      &lt;tr&gt;
+          &lt;th&gt;Agent&lt;/th&gt;
+          &lt;th&gt;类&lt;/th&gt;
+          &lt;th&gt;用途&lt;/th&gt;
+      &lt;/tr&gt;
+  &lt;/thead&gt;
+  &lt;tbody&gt;
+      &lt;tr&gt;
+          &lt;td&gt;&lt;strong&gt;CodeActAgent&lt;/strong&gt;&lt;/td&gt;
+          &lt;td&gt;&lt;code&gt;openhands/agenthub/codeact_agent/&lt;/code&gt;&lt;/td&gt;
+          &lt;td&gt;主要智能体，统一动作空间&lt;/td&gt;
+      &lt;/tr&gt;
+      &lt;tr&gt;
+          &lt;td&gt;&lt;strong&gt;BrowsingAgent&lt;/strong&gt;&lt;/td&gt;
+          &lt;td&gt;&lt;code&gt;openhands/agenthub/browsing_agent/&lt;/code&gt;&lt;/td&gt;
+          &lt;td&gt;网页浏览&lt;/td&gt;
+      &lt;/tr&gt;
+      &lt;tr&gt;
+          &lt;td&gt;&lt;strong&gt;ReadonlyAgent&lt;/strong&gt;&lt;/td&gt;
+          &lt;td&gt;&lt;code&gt;openhands/agenthub/readonly_agent/&lt;/code&gt;&lt;/td&gt;
+          &lt;td&gt;只读操作（继承 CodeActAgent）&lt;/td&gt;
+      &lt;/tr&gt;
+      &lt;tr&gt;
+          &lt;td&gt;&lt;strong&gt;LocAgent&lt;/strong&gt;&lt;/td&gt;
+          &lt;td&gt;&lt;code&gt;openhands/agenthub/loc_agent/&lt;/code&gt;&lt;/td&gt;
+          &lt;td&gt;代码库探索&lt;/td&gt;
+      &lt;/tr&gt;
+      &lt;tr&gt;
+          &lt;td&gt;&lt;strong&gt;DummyAgent&lt;/strong&gt;&lt;/td&gt;
+          &lt;td&gt;&lt;code&gt;openhands/agenthub/dummy_agent/&lt;/code&gt;&lt;/td&gt;
+          &lt;td&gt;测试用&lt;/td&gt;
+      &lt;/tr&gt;
+  &lt;/tbody&gt;
+&lt;/table&gt;
+&lt;hr&gt;
+&lt;h2 id=&#34;2-agent-基类设计&#34;&gt;2. Agent 基类设计&lt;/h2&gt;
+&lt;p&gt;&lt;strong&gt;文件&lt;/strong&gt;: &lt;code&gt;/home/gdw/tutorial/OpenHands/openhands/controller/agent.py&lt;/code&gt;&lt;/p&gt;
+&lt;h3 id=&#34;21-核心抽象&#34;&gt;2.1 核心抽象&lt;/h3&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;&#34;&gt;&lt;code class=&#34;language-python&#34; data-lang=&#34;python&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;Agent&lt;/span&gt;(ABC):
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    _registry: dict[str, type[&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Agent&amp;#39;&lt;/span&gt;]] &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; {}  &lt;span style=&#34;color:#75715e&#34;&gt;# 类注册表&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    sandbox_plugins: list[PluginRequirement] &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; []
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    config_model: type[AgentConfig] &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; AgentConfig
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    &lt;span style=&#34;color:#a6e22e&#34;&gt;@abstractmethod&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;    &lt;span style=&#34;color:#66d9ef&#34;&gt;def&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;step&lt;/span&gt;(self, state: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;State&amp;#39;&lt;/span&gt;) &lt;span style=&#34;color:#f92672&#34;&gt;-&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Action&amp;#39;&lt;/span&gt;:
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;        &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;&amp;#34;&amp;#34;执行一步智能体决策 - 子类必须实现&amp;#34;&amp;#34;&amp;#34;&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;        &lt;span style=&#34;color:#66d9ef&#34;&gt;pass&lt;/span&gt;
+&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h3 id=&#34;22-类注册模式&#34;&gt;2.2 类注册模式&lt;/h3&gt;
+&lt;p&gt;OpenHands 使用&lt;strong&gt;类注册模式&lt;/strong&gt;实现 Agent 的发现和加载：&lt;/p&gt;</description>
     </item>
   </channel>
 </rss>

@@ -110,20 +110,95 @@
 
 <article class="first-entry"> 
   <header class="entry-header">
-    <h2 class="entry-hint-parent">Agent
-      <span class="entry-hint" title="Draft">
-        <svg xmlns="http://www.w3.org/2000/svg" height="20" viewBox="0 -960 960 960" fill="currentColor">
-          <path
-            d="M160-410v-60h300v60H160Zm0-165v-60h470v60H160Zm0-165v-60h470v60H160Zm360 580v-123l221-220q9-9 20-13t22-4q12 0 23 4.5t20 13.5l37 37q9 9 13 20t4 22q0 11-4.5 22.5T862.09-380L643-160H520Zm300-263-37-37 37 37ZM580-220h38l121-122-18-19-19-18-122 121v38Zm141-141-19-18 37 37-18-19Z" />
-        </svg>
-      </span>
+    <h2 class="entry-hint-parent">Openhand_overview
     </h2>
   </header>
   <div class="entry-content">
-    <p> 什么是 ReAct 框架？ ReAct = Reason（推理/思考） &#43; Act（行动）。 在没有 ReAct 之前，大语言模型的工作方式有两种极端： 只思考不行动（如传统的思维链 Chain-of-Thought, CoT）： 就像一个被关在小黑屋里的诸葛亮，算无遗策，但他没法上网查今天的最新数据。一旦他的内置知识有盲区，他就会靠“脑补”产生幻觉。 只行动不思考： 就像一个冲动的莽汉，拿到任务就盲目地去调用各种工具，疯狂试错，最后把自己绕晕，无法解决复杂的连环问题。 ReAct 框架巧妙地将这两者结合在了一起，让 Agent 像一个谨慎严谨的侦探一样，走一步、看一步、想一步。 ReAct 的核心运转机制：“TAO”循环 ReAct 的魔法在于它定义了一个极其经典的执行循环，我们通常称之为 TAO 循环。这三个字母分别代表： 🤔 Thought（思考）： Agent 首先会分析当前的任务状态，并推断出下一步需要做什么。 （内心OS：“用户问我 2026 年奥斯卡最佳影片导演的年龄，我得先找出这部电影的名字，然后再查导演是谁，最后查他的出生年份。”） 🛠️ Action（行动）： 基于刚才的思考，Agent 决定调用工具箱里的某个工具，并传入具体的参数。 （动作：调用【搜索引擎】工具，搜索关键词：“2026 奥斯卡最佳影片”） 👀 Observation（观察）： 工具执行完毕后，Agent 会获取外部世界的真实反馈结果。 （反馈结果：搜索页面显示，2026年奥斯卡最佳影片是《某某电影》。） 完成一次 TAO 循环后，Agent 不会停下，而是把这次的“观察”结果作为新的上下文，开启下一轮的“思考”，直到最终拿到可以回答用户的完整答案。 一个生动的例子：做一道复杂的菜 想象一下你在厨房做一道从未做过的菜。 如果你只用思维链（单纯思考），你会在脑子里想：“先把肉切了，然后下锅炒，然后加盐，最后出锅”。一旦火候不对或者锅底烧焦，因为你闭着眼睛没去看，最后菜就毁了。 如果你用的是 ReAct（思考&#43;行动&#43;观察），你的过程是这样的： Thought（思考）： 菜谱上说先把油烧热，我得去开火。 Action（行动）： 扭动燃气灶开关（调用物理动作）。 Observation（观察）： 看到火苗出来了，锅底开始冒一点青烟。 Thought（思考）： 锅热了，现在该把肉放进去了，但我得小心别被油溅到。 Action（行动）： 把肉倒进锅里，迅速拿锅盖挡住（调用防守动作）。 Observation（观察）： 听到“刺啦”一声，肉变色了。 …（循环继续，直到菜品出锅） 通过这种交替进行的模式，Agent 就不再是凭空想象，而是将自己的推理牢牢锚定在外部世界的客观事实（观察结果）上。这极大减少了幻觉，并让它能够解决那些需要多步嵌套、中途需要根据情况动态调整策略的复杂问题。 </p>
+    <p>文档索引 文档 内容 tutorial.md 项目概述、架构、面试指南 tutorial_agent.md Agent 详解：CodeAct、工具、多智能体、MCP、Skills tutorial_controller.md Controller 详解：主循环、状态管理、委托、循环检测 tutorial_event_stream.md EventStream 详解：事件流、发布-订阅、持久化 tutorial_runtime.md Runtime 详解：沙箱、Docker、执行机制、预热池 项目概述 OpenHands 是一个 AI 原生的软件工程智能体平台，可以让 AI 像人类开发者一样完成各种软件工程任务，如编写代码、运行命令、浏览网页、操作 Git 仓库等。
+OpenHands 能做什么？ 自动化代码开发：编写、修改、重构代码 Bug 修复：分析和修复代码问题 代码审查：审查 Pull Request 自动化测试：运行和编写测试 技术调研：搜索文档、阅读代码库 发布准备：提交代码、创建 PR 应用场景 场景 说明 本地开发 通过 CLI 或 GUI 与 OpenHands 交互 云端服务 托管在云端的服务，支持 Slack、Jira 集成 企业部署 支持 Kubernetes 私有化部署 SDK 集成 通过 Python SDK 构建自己的 AI 应用 系统架构 整体架构图 ┌─────────────────────────────────────────────────────────────────┐ │ 用户界面层 │ │ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ │ │ │ CLI │ │ Web GUI │ │ Slack │ │ SDK │ │ │ └────┬─────┘ └────┬─────┘ └────┬─────┘ └────┬─────┘ │ └───────┼─────────────┼─────────────┼─────────────┼───────────────┘ │ │ │ │ v v v v ┌─────────────────────────────────────────────────────────────────┐ │ 服务层 (App Server) │ │ ┌──────────────────────────────────────────────────────────┐ │ │ │ Conversation Manager (会话管理) │ │ │ └──────────────────────────────────────────────────────────┘ │ │ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ │ │ │ Sandbox │ │ Event │ │ User │ │ │ │ Service │ │ Service │ │ Service │ │ │ └──────┬──────┘ └──────┬──────┘ └─────────────┘ │ └─────────┼────────────────┼──────────────────────────────────────┘ │ │ v v ┌─────────────────────────────────────────────────────────────────┐ │ 智能体层 (Agent Core) │ │ ┌──────────────────────────────────────────────────────────┐ │ │ │ AgentController │ │ │ │ (智能体控制器) │ │ │ └──────────────────────────────────────────────────────────┘ │ │ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ │ │ │ Agent │ │ LLM │ │ Event │ │ │ │ (智能体) │ │ (大模型) │ │ Stream │ │ │ └──────┬──────┘ └──────┬──────┘ └──────┬──────┘ │ └─────────┼────────────────┼────────────────┼─────────────────────┘ │ │ │ v v v ┌─────────────────────────────────────────────────────────────────┐ │ 运行时层 (Runtime) │ │ ┌──────────────────────────────────────────────────────────┐ │ │ │ Action Execution Server │ │ │ │ (动作执行服务器) │ │ │ └──────────────────────────────────────────────────────────┘ │ │ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ │ │ │ Docker │ │ IPython │ │ Browser │ │ │ │ (容器) │ │ (代码执行) │ │ (浏览) │ │ │ └─────────────┘ └─────────────┘ └─────────────┘ │ └─────────────────────────────────────────────────────────────────┘ 核心组件 1. 智能体 (Agent) 智能体是 OpenHands 的&#34;大脑&#34;，负责：
+...</p>
   </div>
-  <footer class="entry-footer"><span title='2026-04-09 20:27:38 +0800 CST'>April 9, 2026</span></footer>
-  <a class="entry-link" aria-label="post link to Agent" href="http://localhost:1313/posts/agent/"></a>
+  <footer class="entry-footer"><span title='2026-04-10 09:52:11 +0800 CST'>April 10, 2026</span></footer>
+  <a class="entry-link" aria-label="post link to Openhand_overview" href="http://localhost:1313/posts/openhand_overview/"></a>
+</article>
+
+<article class="post-entry"> 
+  <header class="entry-header">
+    <h2 class="entry-hint-parent">Openhand_controller
+    </h2>
+  </header>
+  <div class="entry-content">
+    <p>目录 概述 AgentController 核心结构 状态管理 主循环实现 事件流集成 委托/多智能体系统 循环检测与错误处理 配置系统 架构流程图 面试问题 1. 概述 1.1 什么是 AgentController AgentController 是 OpenHands 的&#34;引擎&#34;，负责：
+驱动智能体的主循环 管理任务状态 协调各组件通信 处理异常和循环检测 文件: /home/gdw/tutorial/OpenHands/openhands/controller/agent_controller.py
+1.2 核心职责 AgentController │ ├── 主循环驱动 (_step) ├── 状态管理 (StateTracker) ├── 事件路由 (EventStream) ├── 委托管理 (Delegate) ├── 循环检测 (StuckDetector) ├── 安全分析 (SecurityAnalyzer) └── 配置控制 (ControlFlags) 2. AgentController 核心结构 2.1 类定义 class AgentController: id: str agent: Agent max_iterations: int event_stream: EventStream state: State confirmation_mode: bool agent_to_llm_config: dict[str, LLMConfig] agent_configs: dict[str, AgentConfig] parent: &#39;AgentController | None&#39; = None delegate: &#39;AgentController | None&#39; = None _pending_action_info: tuple[Action, float] | None = None _closed: bool = False 2.2 初始化流程 def __init__( self, agent: Agent, event_stream: EventStream, conversation_stats: ConversationStats, iteration_delta: int, # 最大迭代次数 budget_per_task_delta: float | None = None, # 最大预算 agent_to_llm_config: dict[str, LLMConfig] | None = None, agent_configs: dict[str, AgentConfig] | None = None, sid: str | None = None, file_store: FileStore | None = None, user_id: str | None = None, confirmation_mode: bool = False, initial_state: State | None = None, is_delegate: bool = False, headless_mode: bool = True, status_callback: Callable | None = None, replay_events: list[Event] | None = None, security_analyzer: &#39;SecurityAnalyzer | None&#39; = None, ): 初始化步骤：
+...</p>
+  </div>
+  <footer class="entry-footer"><span title='2026-04-10 09:51:58 +0800 CST'>April 10, 2026</span></footer>
+  <a class="entry-link" aria-label="post link to Openhand_controller" href="http://localhost:1313/posts/openhand_controller/"></a>
+</article>
+
+<article class="post-entry"> 
+  <header class="entry-header">
+    <h2 class="entry-hint-parent">Openhand_runtime
+    </h2>
+  </header>
+  <div class="entry-content">
+    <p>目录 概述 Base Runtime 抽象接口 DockerRuntime 实现 LocalRuntime 实现 RemoteRuntime 与 KubernetesRuntime Action Execution Server 动作执行机制 沙箱管理 安全机制 架构流程图 面试问题 1. 概述 1.1 什么是 Runtime Runtime 是 OpenHands 的&#34;手脚&#34;，负责在实际隔离环境中执行 Agent 生成的 Action。
+文件: /home/gdw/tutorial/OpenHands/openhands/runtime/
+1.2 Runtime 职责 Runtime │ ├── 执行 Bash 命令 ├── 执行 Python 代码 (IPython/Jupyter) ├── 文件系统操作 (读/写/编辑) ├── 浏览器自动化 ├── MCP 工具调用 └── 环境隔离 1.3 运行时类型 运行时 说明 DockerRuntime Docker 容器隔离（默认） LocalRuntime 本地机器执行（无隔离） RemoteRuntime 连接远程运行时服务器 KubernetesRuntime K8s 集群中执行 2. Base Runtime 抽象接口 2.1 Runtime 基类 文件: /home/gdw/tutorial/OpenHands/openhands/runtime/base.py
+...</p>
+  </div>
+  <footer class="entry-footer"><span title='2026-04-10 09:51:52 +0800 CST'>April 10, 2026</span></footer>
+  <a class="entry-link" aria-label="post link to Openhand_runtime" href="http://localhost:1313/posts/openhand_runtime/"></a>
+</article>
+
+<article class="post-entry"> 
+  <header class="entry-header">
+    <h2 class="entry-hint-parent">Openhand_memory
+    </h2>
+  </header>
+  <div class="entry-content">
+    <p>概述 OpenHands 的记忆系统是一个多层次的系统，负责管理 AI Agent 的信息检索和对话历史处理。它使 Agent 能够在执行任务时记住重要的上下文信息，并根据需要检索知识。
+记忆系统主要由三个核心组件构成：
+Memory (openhands/memory/memory.py) - 处理召回动作和微代理知识检索 ConversationMemory (openhands/memory/conversation_memory.py) - 将事件流转换为 LLM 可用的消息格式 Condenser (openhands/memory/condenser/) - 当对话历史过长时进行压缩和摘要 1. Recall 类型 OpenHands 定义了两种召回类型，用于区分不同来源的记忆检索：
+# openhands/events/recall_type.py class RecallType(str, Enum): WORKSPACE_CONTEXT = &#39;workspace_context&#39; # 工作区上下文（仓库、运行时等） KNOWLEDGE = &#39;knowledge&#39; # 知识微代理触发 类型 触发方式 用途 WORKSPACE_CONTEXT 用户消息附带召回请求 获取仓库信息、运行时环境、对话指令 KNOWLEDGE 匹配知识微代理的关键词 检索用户自定义的知识库 2. 微代理 (Microagent) 系统 微代理是 OpenHands 记忆系统的重要组成部分，允许用户定义可被动态检索的知识片段。
+2.1 微代理类型 # openhands/microagent/types.py class MicroagentType(str, Enum): KNOWLEDGE = &#39;knowledge&#39; # 关键词触发型知识 REPO_KNOWLEDGE = &#39;repo_knowledge&#39; # 仓库级知识，始终激活 TASK = &#39;task&#39; # 任务型，需要用户输入 类型 描述 触发方式 KNOWLEDGE 可选微代理 对话中包含关键词时触发 REPO_KNOWLEDGE 仓库级知识 始终加载，提供仓库特定信息 TASK 任务型 需要用户通过 /agent_name 命令调用 2.2 微代理存储位置 微代理从以下位置加载：
+...</p>
+  </div>
+  <footer class="entry-footer"><span title='2026-04-10 09:51:46 +0800 CST'>April 10, 2026</span></footer>
+  <a class="entry-link" aria-label="post link to Openhand_memory" href="http://localhost:1313/posts/openhand_memory/"></a>
+</article>
+
+<article class="post-entry"> 
+  <header class="entry-header">
+    <h2 class="entry-hint-parent">Openhand_event_stream
+    </h2>
+  </header>
+  <div class="entry-content">
+    <p>目录 概述 Event 类层次结构 EventStream 实现 EventStore 持久化 发布-订阅机制 事件流转 事件序列化 设计模式 架构流程图 面试问题 1. 概述 1.1 什么是 EventStream EventStream 是 OpenHands 的中央消息总线，采用发布-订阅（Pub/Sub）模式连接所有组件。
+文件: /home/gdw/tutorial/OpenHands/openhands/events/stream.py
+1.2 核心功能 EventStream │ ├── 发布/订阅机制 ├── 事件持久化 ├── 异步事件分发 ├── 秘密替换 └── 写缓存优化 2. Event 类层次结构 2.1 基类 Event 文件: /home/gdw/tutorial/OpenHands/openhands/events/event.py
+@dataclass class Event: INVALID_ID = -1 # 属性 id: int # 唯一标识 timestamp: str # ISO 时间戳 source: EventSource # 来源 (AGENT/USER/ENVIRONMENT) cause: int # 触发事件的 ID timeout: float | None # 超时时间 2.2 EventSource 枚举 class EventSource(str, Enum): AGENT = &#39;agent&#39; # 智能体发出 USER = &#39;user&#39; # 用户发出 ENVIRONMENT = &#39;environment&#39; # 环境发出 2.3 Action 和 Observation # Action - 智能体发出的动作请求 @dataclass class Action(Event): runnable: ClassVar[bool] = False # 是否可执行 # Observation - 执行结果 @dataclass class Observation(Event): content: str # 结果内容 2.4 完整事件层次 Event (基类) ├── Action (动作请求) │ ├── CmdRunAction # 运行命令 │ ├── IPythonRunCellAction # 运行 Python │ ├── BrowseURLAction # 浏览 URL │ ├── BrowseInteractiveAction # 交互浏览 │ ├── FileReadAction # 读文件 │ ├── FileWriteAction # 写文件 │ ├── FileEditAction # 编辑文件 │ ├── MCPAction # MCP 工具调用 │ ├── MessageAction # 消息 │ ├── AgentThinkAction # 思考 │ ├── AgentFinishAction # 完成任务 │ ├── AgentRejectAction # 拒绝任务 │ ├── AgentDelegateAction # 委托 │ ├── CondensationRequestAction # 请求压缩 │ └── NullAction # 空动作 │ └── Observation (执行结果) ├── CmdOutputObservation # 命令输出 ├── IPythonRunCellObservation ├── BrowserOutputObservation ├── FileReadObservation ├── ErrorObservation # 错误 ├── SuccessObservation # 成功 ├── AgentDelegateObservation # 委托结果 ├── MCPObservation # MCP 结果 ├── RecallObservation # 记忆检索 └── NullObservation # 空观察 2.5 关键 Action 类 文件: /home/gdw/tutorial/OpenHands/openhands/events/action/commands.py
+...</p>
+  </div>
+  <footer class="entry-footer"><span title='2026-04-10 09:51:41 +0800 CST'>April 10, 2026</span></footer>
+  <a class="entry-link" aria-label="post link to Openhand_event_stream" href="http://localhost:1313/posts/openhand_event_stream/"></a>
+</article>
+
+<article class="post-entry"> 
+  <header class="entry-header">
+    <h2 class="entry-hint-parent">Openhands Agent浅析
+    </h2>
+  </header>
+  <div class="entry-content">
+    <p>目录 Agent 概述 Agent 基类设计 CodeActAgent 详解 工具系统 多智能体模式 Skills 系统 MCP 集成 Microagent 微智能体 架构图 面试问题 1. Agent 概述 1.1 什么是 Agent 在 OpenHands 中，Agent（智能体） 是整个系统的&#34;大脑&#34;。它负责：
+理解用户任务 制定执行计划 生成具体动作（Action） 决定何时完成任务 Agent 基于大语言模型（LLM）实现，通过 step() 方法驱动每次决策。
+1.2 Agent 类型 Agent 类 用途 CodeActAgent openhands/agenthub/codeact_agent/ 主要智能体，统一动作空间 BrowsingAgent openhands/agenthub/browsing_agent/ 网页浏览 ReadonlyAgent openhands/agenthub/readonly_agent/ 只读操作（继承 CodeActAgent） LocAgent openhands/agenthub/loc_agent/ 代码库探索 DummyAgent openhands/agenthub/dummy_agent/ 测试用 2. Agent 基类设计 文件: /home/gdw/tutorial/OpenHands/openhands/controller/agent.py
+2.1 核心抽象 class Agent(ABC): _registry: dict[str, type[&#39;Agent&#39;]] = {} # 类注册表 sandbox_plugins: list[PluginRequirement] = [] config_model: type[AgentConfig] = AgentConfig @abstractmethod def step(self, state: &#39;State&#39;) -&gt; &#39;Action&#39;: &#34;&#34;&#34;执行一步智能体决策 - 子类必须实现&#34;&#34;&#34; pass 2.2 类注册模式 OpenHands 使用类注册模式实现 Agent 的发现和加载：
+...</p>
+  </div>
+  <footer class="entry-footer"><span title='2026-04-10 09:47:47 +0800 CST'>April 10, 2026</span></footer>
+  <a class="entry-link" aria-label="post link to Openhands Agent浅析" href="http://localhost:1313/posts/openhands_agent/"></a>
 </article>
     </main>
     

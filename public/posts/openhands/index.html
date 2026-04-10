@@ -1,0 +1,1212 @@
+<!DOCTYPE html>
+<html lang="en" dir="auto" data-theme="auto">
+
+<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script><meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<meta name="robots" content="noindex, nofollow">
+<title>Openhands Agent浅析 | My New Hugo Project</title>
+<meta name="keywords" content="">
+<meta name="description" content="目录
+
+Agent 概述
+Agent 基类设计
+CodeActAgent 详解
+工具系统
+多智能体模式
+Skills 系统
+MCP 集成
+Microagent 微智能体
+架构图
+面试问题
+
+
+1. Agent 概述
+1.1 什么是 Agent
+在 OpenHands 中，Agent（智能体） 是整个系统的&quot;大脑&quot;。它负责：
+
+理解用户任务
+制定执行计划
+生成具体动作（Action）
+决定何时完成任务
+
+Agent 基于大语言模型（LLM）实现，通过 step() 方法驱动每次决策。
+1.2 Agent 类型
+
+  
+      
+          Agent
+          类
+          用途
+      
+  
+  
+      
+          CodeActAgent
+          openhands/agenthub/codeact_agent/
+          主要智能体，统一动作空间
+      
+      
+          BrowsingAgent
+          openhands/agenthub/browsing_agent/
+          网页浏览
+      
+      
+          ReadonlyAgent
+          openhands/agenthub/readonly_agent/
+          只读操作（继承 CodeActAgent）
+      
+      
+          LocAgent
+          openhands/agenthub/loc_agent/
+          代码库探索
+      
+      
+          DummyAgent
+          openhands/agenthub/dummy_agent/
+          测试用
+      
+  
+
+
+2. Agent 基类设计
+文件: /home/gdw/tutorial/OpenHands/openhands/controller/agent.py
+2.1 核心抽象
+class Agent(ABC):
+    _registry: dict[str, type[&#39;Agent&#39;]] = {}  # 类注册表
+    sandbox_plugins: list[PluginRequirement] = []
+    config_model: type[AgentConfig] = AgentConfig
+
+    @abstractmethod
+    def step(self, state: &#39;State&#39;) -&gt; &#39;Action&#39;:
+        &#34;&#34;&#34;执行一步智能体决策 - 子类必须实现&#34;&#34;&#34;
+        pass
+2.2 类注册模式
+OpenHands 使用类注册模式实现 Agent 的发现和加载：">
+<meta name="author" content="">
+<link rel="canonical" href="http://localhost:1313/posts/openhands/">
+<link crossorigin="anonymous" href="/assets/css/stylesheet.199042e659bc7245f5609d333d6c044eb554a0640849bb874e1dff8eb0f57209.css" integrity="sha256-GZBC5lm8ckX1YJ0zPWwETrVUoGQISbuHTh3/jrD1cgk=" rel="preload stylesheet" as="style">
+<link rel="icon" href="http://localhost:1313/favicon.ico">
+<link rel="icon" type="image/png" sizes="16x16" href="http://localhost:1313/favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="http://localhost:1313/favicon-32x32.png">
+<link rel="apple-touch-icon" href="http://localhost:1313/apple-touch-icon.png">
+<link rel="mask-icon" href="http://localhost:1313/safari-pinned-tab.svg">
+<meta name="theme-color" content="#2e2e33">
+<meta name="msapplication-TileColor" content="#2e2e33">
+<link rel="alternate" hreflang="en" href="http://localhost:1313/posts/openhands/">
+<noscript>
+    <style>
+        #theme-toggle,
+        .top-link {
+            display: none;
+        }
+
+    </style>
+    <style>
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --theme: rgb(29, 30, 32);
+                --entry: rgb(46, 46, 51);
+                --primary: rgb(218, 218, 219);
+                --secondary: rgb(155, 156, 157);
+                --tertiary: rgb(65, 66, 68);
+                --content: rgb(196, 196, 197);
+                --code-block-bg: rgb(46, 46, 51);
+                --code-bg: rgb(55, 56, 62);
+                --border: rgb(51, 51, 51);
+                color-scheme: dark;
+            }
+
+            .list {
+                background: var(--theme);
+            }
+
+            .toc {
+                background: var(--entry);
+            }
+        }
+
+        @media (prefers-color-scheme: light) {
+            .list::-webkit-scrollbar-thumb {
+                border-color: var(--code-bg);
+            }
+        }
+
+    </style>
+</noscript>
+<script>
+    if (localStorage.getItem("pref-theme") === "dark") {
+        document.querySelector("html").dataset.theme = 'dark';
+    } else if (localStorage.getItem("pref-theme") === "light") {
+       document.querySelector("html").dataset.theme = 'light';
+    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.querySelector("html").dataset.theme = 'dark';
+    } else {
+        document.querySelector("html").dataset.theme = 'light';
+    }
+
+</script>
+</head>
+<body id="top">
+    <header class="header">
+    <nav class="nav">
+        <div class="logo">
+            <a href="http://localhost:1313/" accesskey="h" title="My New Hugo Project (Alt + H)">My New Hugo Project</a>
+            <div class="logo-switches">
+                <button id="theme-toggle" accesskey="t" title="(Alt + T)" aria-label="Toggle theme">
+                    <svg id="moon" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                    <svg id="sun" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <ul id="menu">
+        </ul>
+    </nav>
+</header>
+<main class="main">
+
+<article class="post-single">
+  <header class="post-header">
+    
+    <h1 class="post-title entry-hint-parent">
+      Openhands Agent浅析
+    </h1>
+    <div class="post-meta"><span title='2026-04-10 09:47:47 +0800 CST'>April 10, 2026</span>
+
+</div>
+  </header> 
+  <div class="post-content"><h2 id="目录">目录<a hidden class="anchor" aria-hidden="true" href="#目录">#</a></h2>
+<ol>
+<li><a href="#1-agent-%E6%A6%82%E8%BF%B0">Agent 概述</a></li>
+<li><a href="#2-agent-%E5%9F%BA%E7%B1%BB%E8%AE%BE%E8%AE%A1">Agent 基类设计</a></li>
+<li><a href="#3-codeactagent-%E8%AF%A6%E8%A7%A3">CodeActAgent 详解</a></li>
+<li><a href="#4-%E5%B7%A5%E5%85%B7%E7%B3%BB%E7%BB%9F">工具系统</a></li>
+<li><a href="#5-%E5%A4%9A%E6%99%BA%E8%83%BD%E4%BD%93%E6%A8%A1%E5%BC%8F">多智能体模式</a></li>
+<li><a href="#6-skills-%E7%B3%BB%E7%BB%9F">Skills 系统</a></li>
+<li><a href="#7-mcp-%E9%9B%86%E6%88%90">MCP 集成</a></li>
+<li><a href="#8-microagent-%E5%BE%AE%E6%99%BA%E8%83%BD%E4%BD%93">Microagent 微智能体</a></li>
+<li><a href="#9-%E6%9E%B6%E6%9E%84%E5%9B%BE">架构图</a></li>
+<li><a href="#10-%E9%9D%A2%E8%AF%95%E9%97%AE%E9%A2%98">面试问题</a></li>
+</ol>
+<hr>
+<h2 id="1-agent-概述">1. Agent 概述<a hidden class="anchor" aria-hidden="true" href="#1-agent-概述">#</a></h2>
+<h3 id="11-什么是-agent">1.1 什么是 Agent<a hidden class="anchor" aria-hidden="true" href="#11-什么是-agent">#</a></h3>
+<p>在 OpenHands 中，<strong>Agent（智能体）</strong> 是整个系统的&quot;大脑&quot;。它负责：</p>
+<ul>
+<li>理解用户任务</li>
+<li>制定执行计划</li>
+<li>生成具体动作（Action）</li>
+<li>决定何时完成任务</li>
+</ul>
+<p>Agent 基于大语言模型（LLM）实现，通过 <code>step()</code> 方法驱动每次决策。</p>
+<h3 id="12-agent-类型">1.2 Agent 类型<a hidden class="anchor" aria-hidden="true" href="#12-agent-类型">#</a></h3>
+<table>
+  <thead>
+      <tr>
+          <th>Agent</th>
+          <th>类</th>
+          <th>用途</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><strong>CodeActAgent</strong></td>
+          <td><code>openhands/agenthub/codeact_agent/</code></td>
+          <td>主要智能体，统一动作空间</td>
+      </tr>
+      <tr>
+          <td><strong>BrowsingAgent</strong></td>
+          <td><code>openhands/agenthub/browsing_agent/</code></td>
+          <td>网页浏览</td>
+      </tr>
+      <tr>
+          <td><strong>ReadonlyAgent</strong></td>
+          <td><code>openhands/agenthub/readonly_agent/</code></td>
+          <td>只读操作（继承 CodeActAgent）</td>
+      </tr>
+      <tr>
+          <td><strong>LocAgent</strong></td>
+          <td><code>openhands/agenthub/loc_agent/</code></td>
+          <td>代码库探索</td>
+      </tr>
+      <tr>
+          <td><strong>DummyAgent</strong></td>
+          <td><code>openhands/agenthub/dummy_agent/</code></td>
+          <td>测试用</td>
+      </tr>
+  </tbody>
+</table>
+<hr>
+<h2 id="2-agent-基类设计">2. Agent 基类设计<a hidden class="anchor" aria-hidden="true" href="#2-agent-基类设计">#</a></h2>
+<p><strong>文件</strong>: <code>/home/gdw/tutorial/OpenHands/openhands/controller/agent.py</code></p>
+<h3 id="21-核心抽象">2.1 核心抽象<a hidden class="anchor" aria-hidden="true" href="#21-核心抽象">#</a></h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">Agent</span>(ABC):
+</span></span><span style="display:flex;"><span>    _registry: dict[str, type[<span style="color:#e6db74">&#39;Agent&#39;</span>]] <span style="color:#f92672">=</span> {}  <span style="color:#75715e"># 类注册表</span>
+</span></span><span style="display:flex;"><span>    sandbox_plugins: list[PluginRequirement] <span style="color:#f92672">=</span> []
+</span></span><span style="display:flex;"><span>    config_model: type[AgentConfig] <span style="color:#f92672">=</span> AgentConfig
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">@abstractmethod</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">step</span>(self, state: <span style="color:#e6db74">&#39;State&#39;</span>) <span style="color:#f92672">-&gt;</span> <span style="color:#e6db74">&#39;Action&#39;</span>:
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#34;&#34;&#34;执行一步智能体决策 - 子类必须实现&#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">pass</span>
+</span></span></code></pre></div><h3 id="22-类注册模式">2.2 类注册模式<a hidden class="anchor" aria-hidden="true" href="#22-类注册模式">#</a></h3>
+<p>OpenHands 使用<strong>类注册模式</strong>实现 Agent 的发现和加载：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">Agent</span>(ABC):
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">@classmethod</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">register</span>(cls, name: str, agent_cls: type[<span style="color:#e6db74">&#39;Agent&#39;</span>]) <span style="color:#f92672">-&gt;</span> <span style="color:#66d9ef">None</span>:
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#34;&#34;&#34;注册智能体到注册表&#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> name <span style="color:#f92672">in</span> cls<span style="color:#f92672">.</span>_registry:
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">raise</span> AgentAlreadyRegisteredError(name)
+</span></span><span style="display:flex;"><span>        cls<span style="color:#f92672">.</span>_registry[name] <span style="color:#f92672">=</span> agent_cls
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">@classmethod</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">get_cls</span>(cls, name: str) <span style="color:#f92672">-&gt;</span> type[<span style="color:#e6db74">&#39;Agent&#39;</span>]:
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#34;&#34;&#34;根据名称获取智能体类&#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> name <span style="color:#f92672">not</span> <span style="color:#f92672">in</span> cls<span style="color:#f92672">.</span>_registry:
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">raise</span> AgentNotRegisteredError(name)
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> cls<span style="color:#f92672">.</span>_registry[name]
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">@classmethod</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">list_agents</span>(cls) <span style="color:#f92672">-&gt;</span> list[str]:
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#34;&#34;&#34;列出所有注册的智能体&#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> list(cls<span style="color:#f92672">.</span>_registry<span style="color:#f92672">.</span>keys())
+</span></span></code></pre></div><p><strong>使用方式</strong>：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#75715e"># 注册</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">MyAgent</span>(Agent):
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">pass</span>
+</span></span><span style="display:flex;"><span>Agent<span style="color:#f92672">.</span>register(<span style="color:#e6db74">&#39;my_agent&#39;</span>, MyAgent)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 获取</span>
+</span></span><span style="display:flex;"><span>agent_cls <span style="color:#f92672">=</span> Agent<span style="color:#f92672">.</span>get_cls(<span style="color:#e6db74">&#39;codeact_agent&#39;</span>)
+</span></span></code></pre></div><h3 id="23-工具管理">2.3 工具管理<a hidden class="anchor" aria-hidden="true" href="#23-工具管理">#</a></h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">Agent</span>(ABC):
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">__init__</span>(self, config: AgentConfig, llm_registry: LLMRegistry):
+</span></span><span style="display:flex;"><span>        self<span style="color:#f92672">.</span>tools: list[ChatCompletionToolParam] <span style="color:#f92672">=</span> []  <span style="color:#75715e"># 内置工具</span>
+</span></span><span style="display:flex;"><span>        self<span style="color:#f92672">.</span>mcp_tools: dict[str, ChatCompletionToolParam] <span style="color:#f92672">=</span> {}  <span style="color:#75715e"># MCP 工具</span>
+</span></span><span style="display:flex;"><span>        self<span style="color:#f92672">.</span>llm <span style="color:#f92672">=</span> llm_registry<span style="color:#f92672">.</span>get_llm(config<span style="color:#f92672">.</span>llm)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">set_mcp_tools</span>(self, mcp_tools: list[dict]) <span style="color:#f92672">-&gt;</span> <span style="color:#66d9ef">None</span>:
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#34;&#34;&#34;设置 MCP 工具&#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">for</span> tool <span style="color:#f92672">in</span> mcp_tools:
+</span></span><span style="display:flex;"><span>            _tool <span style="color:#f92672">=</span> ChatCompletionToolParam(<span style="color:#f92672">**</span>tool)
+</span></span><span style="display:flex;"><span>            self<span style="color:#f92672">.</span>mcp_tools[_tool[<span style="color:#e6db74">&#39;function&#39;</span>][<span style="color:#e6db74">&#39;name&#39;</span>]] <span style="color:#f92672">=</span> _tool
+</span></span><span style="display:flex;"><span>            self<span style="color:#f92672">.</span>tools<span style="color:#f92672">.</span>append(_tool)
+</span></span></code></pre></div><hr>
+<h2 id="3-codeactagent-详解">3. CodeActAgent 详解<a hidden class="anchor" aria-hidden="true" href="#3-codeactagent-详解">#</a></h2>
+<h3 id="31-什么是-codeact">3.1 什么是 CodeAct<a hidden class="anchor" aria-hidden="true" href="#31-什么是-codeact">#</a></h3>
+<p><strong>CodeAct</strong> 源自论文 <a href="https://arxiv.org/abs/2402.01030">CodeAct: Towards Unified Code Actions</a>，核心思想是：</p>
+<blockquote>
+<p><strong>将所有工具调用统一到一个&quot;代码执行空间&quot;</strong></p>
+</blockquote>
+<p><strong>传统方式</strong>：为每种操作定义独立工具（<code>search_web</code>、<code>read_file</code>、<code>run_command</code>），工具数量多且分散。</p>
+<p><strong>CodeAct</strong>：只用一个&quot;代码执行&quot;工具，智能体生成 Python 代码来描述操作。</p>
+<h3 id="32-codeactagent-结构">3.2 CodeActAgent 结构<a hidden class="anchor" aria-hidden="true" href="#32-codeactagent-结构">#</a></h3>
+<p><strong>文件</strong>: <code>/home/gdw/tutorial/OpenHands/openhands/agenthub/codeact_agent/codeact_agent.py</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">CodeActAgent</span>(Agent):
+</span></span><span style="display:flex;"><span>    VERSION <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;2.2&#39;</span>
+</span></span><span style="display:flex;"><span>    sandbox_plugins: list[PluginRequirement] <span style="color:#f92672">=</span> [
+</span></span><span style="display:flex;"><span>        AgentSkillsRequirement(),  <span style="color:#75715e"># 提供 Python 函数库</span>
+</span></span><span style="display:flex;"><span>        JupyterRequirement(),       <span style="color:#75715e"># 交互式 Python 解释器</span>
+</span></span><span style="display:flex;"><span>    ]
+</span></span></code></pre></div><h3 id="33-step-执行流程">3.3 Step 执行流程<a hidden class="anchor" aria-hidden="true" href="#33-step-执行流程">#</a></h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">step</span>(self, state: State) <span style="color:#f92672">-&gt;</span> <span style="color:#e6db74">&#39;Action&#39;</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># 1. 返回待处理动作（如果有）</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> self<span style="color:#f92672">.</span>pending_actions:
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> self<span style="color:#f92672">.</span>pending_actions<span style="color:#f92672">.</span>popleft()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># 2. 检查是否需要压缩历史</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">match</span> self<span style="color:#f92672">.</span>condenser<span style="color:#f92672">.</span>condensed_history(state):
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">case</span> View(events<span style="color:#f92672">=</span>events, forgotten_event_ids<span style="color:#f92672">=</span>forgotten_ids):
+</span></span><span style="display:flex;"><span>            condensed_history <span style="color:#f92672">=</span> events
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">case</span> Condensation(action<span style="color:#f92672">=</span>condensation_action):
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">return</span> condensation_action  <span style="color:#75715e"># 返回压缩动作</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># 3. 构建 LLM 消息</span>
+</span></span><span style="display:flex;"><span>    messages <span style="color:#f92672">=</span> self<span style="color:#f92672">.</span>_get_messages(condensed_history, initial_user_message, forgotten_event_ids)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># 4. 调用 LLM</span>
+</span></span><span style="display:flex;"><span>    params <span style="color:#f92672">=</span> {
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#39;messages&#39;</span>: messages,
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#39;tools&#39;</span>: check_tools(self<span style="color:#f92672">.</span>tools, self<span style="color:#f92672">.</span>llm<span style="color:#f92672">.</span>config),
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#39;extra_body&#39;</span>: {<span style="color:#f92672">...</span>}
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>    response <span style="color:#f92672">=</span> self<span style="color:#f92672">.</span>llm<span style="color:#f92672">.</span>completion(<span style="color:#f92672">**</span>params)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># 5. 解析响应为动作</span>
+</span></span><span style="display:flex;"><span>    actions <span style="color:#f92672">=</span> self<span style="color:#f92672">.</span>response_to_actions(response)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">for</span> action <span style="color:#f92672">in</span> actions:
+</span></span><span style="display:flex;"><span>        self<span style="color:#f92672">.</span>pending_actions<span style="color:#f92672">.</span>append(action)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> self<span style="color:#f92672">.</span>pending_actions<span style="color:#f92672">.</span>popleft()
+</span></span></code></pre></div><h3 id="34-可用工具">3.4 可用工具<a hidden class="anchor" aria-hidden="true" href="#34-可用工具">#</a></h3>
+<table>
+  <thead>
+      <tr>
+          <th>工具</th>
+          <th>动作类</th>
+          <th>功能</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>bash</code></td>
+          <td><code>CmdRunAction</code></td>
+          <td>执行 Bash 命令</td>
+      </tr>
+      <tr>
+          <td><code>IPythonTool</code></td>
+          <td><code>IPythonRunCellAction</code></td>
+          <td>执行 Python 代码</td>
+      </tr>
+      <tr>
+          <td><code>BrowserTool</code></td>
+          <td><code>BrowseInteractiveAction</code></td>
+          <td>浏览器交互</td>
+      </tr>
+      <tr>
+          <td><code>FinishTool</code></td>
+          <td><code>AgentFinishAction</code></td>
+          <td>标记任务完成</td>
+      </tr>
+      <tr>
+          <td><code>ThinkTool</code></td>
+          <td><code>AgentThinkAction</code></td>
+          <td>记录推理过程</td>
+      </tr>
+      <tr>
+          <td><code>StrReplaceEditorTool</code></td>
+          <td><code>FileEditAction</code>/<code>FileReadAction</code></td>
+          <td>文件操作</td>
+      </tr>
+      <tr>
+          <td><code>TaskTrackerTool</code></td>
+          <td><code>TaskTrackingAction</code></td>
+          <td>任务管理</td>
+      </tr>
+      <tr>
+          <td><code>CondensationRequestTool</code></td>
+          <td><code>CondensationRequestAction</code></td>
+          <td>内存压缩</td>
+      </tr>
+  </tbody>
+</table>
+<h3 id="35-工具配置">3.5 工具配置<a hidden class="anchor" aria-hidden="true" href="#35-工具配置">#</a></h3>
+<p>工具根据配置选择性启用：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">_get_tools</span>(self) <span style="color:#f92672">-&gt;</span> list[<span style="color:#e6db74">&#39;ChatCompletionToolParam&#39;</span>]:
+</span></span><span style="display:flex;"><span>    tools <span style="color:#f92672">=</span> []
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> self<span style="color:#f92672">.</span>config<span style="color:#f92672">.</span>enable_cmd:
+</span></span><span style="display:flex;"><span>        tools<span style="color:#f92672">.</span>append(create_cmd_run_tool(<span style="color:#f92672">...</span>))
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> self<span style="color:#f92672">.</span>config<span style="color:#f92672">.</span>enable_think:
+</span></span><span style="display:flex;"><span>        tools<span style="color:#f92672">.</span>append(ThinkTool)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> self<span style="color:#f92672">.</span>config<span style="color:#f92672">.</span>enable_finish:
+</span></span><span style="display:flex;"><span>        tools<span style="color:#f92672">.</span>append(FinishTool)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> self<span style="color:#f92672">.</span>config<span style="color:#f92672">.</span>enable_browsing:
+</span></span><span style="display:flex;"><span>        tools<span style="color:#f92672">.</span>append(BrowserTool)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> self<span style="color:#f92672">.</span>config<span style="color:#f92672">.</span>enable_jupyter:
+</span></span><span style="display:flex;"><span>        tools<span style="color:#f92672">.</span>append(IPythonTool)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> self<span style="color:#f92672">.</span>config<span style="color:#f92672">.</span>enable_plan_mode:
+</span></span><span style="display:flex;"><span>        tools<span style="color:#f92672">.</span>append(create_task_tracker_tool(<span style="color:#f92672">...</span>))
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> self<span style="color:#f92672">.</span>config<span style="color:#f92672">.</span>enable_editor:
+</span></span><span style="display:flex;"><span>        tools<span style="color:#f92672">.</span>append(create_str_replace_editor_tool(<span style="color:#f92672">...</span>))
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> tools
+</span></span></code></pre></div><hr>
+<h2 id="4-工具系统">4. 工具系统<a hidden class="anchor" aria-hidden="true" href="#4-工具系统">#</a></h2>
+<h3 id="41-工具定义模式">4.1 工具定义模式<a hidden class="anchor" aria-hidden="true" href="#41-工具定义模式">#</a></h3>
+<p>工具定义为 <code>ChatCompletionToolParam</code> 对象（LiteLLM 格式）：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#75715e"># ThinkTool 示例</span>
+</span></span><span style="display:flex;"><span>ThinkTool <span style="color:#f92672">=</span> ChatCompletionToolParam(
+</span></span><span style="display:flex;"><span>    type<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;function&#39;</span>,
+</span></span><span style="display:flex;"><span>    function<span style="color:#f92672">=</span>ChatCompletionToolParamFunctionChunk(
+</span></span><span style="display:flex;"><span>        name<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;think&#39;</span>,
+</span></span><span style="display:flex;"><span>        description<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;Use the tool to think about something...&#39;</span>,
+</span></span><span style="display:flex;"><span>        parameters<span style="color:#f92672">=</span>{
+</span></span><span style="display:flex;"><span>            <span style="color:#e6db74">&#39;type&#39;</span>: <span style="color:#e6db74">&#39;object&#39;</span>,
+</span></span><span style="display:flex;"><span>            <span style="color:#e6db74">&#39;properties&#39;</span>: {
+</span></span><span style="display:flex;"><span>                <span style="color:#e6db74">&#39;thought&#39;</span>: {<span style="color:#e6db74">&#39;type&#39;</span>: <span style="color:#e6db74">&#39;string&#39;</span>, <span style="color:#e6db74">&#39;description&#39;</span>: <span style="color:#e6db74">&#39;The thought to log.&#39;</span>},
+</span></span><span style="display:flex;"><span>            },
+</span></span><span style="display:flex;"><span>            <span style="color:#e6db74">&#39;required&#39;</span>: [<span style="color:#e6db74">&#39;thought&#39;</span>],
+</span></span><span style="display:flex;"><span>        },
+</span></span><span style="display:flex;"><span>    ),
+</span></span><span style="display:flex;"><span>)
+</span></span></code></pre></div><h3 id="42-动作解析">4.2 动作解析<a hidden class="anchor" aria-hidden="true" href="#42-动作解析">#</a></h3>
+<p><strong>文件</strong>: <code>/home/gdw/tutorial/OpenHands/openhands/agenthub/codeact_agent/function_calling.py</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">response_to_actions</span>(response: ModelResponse, mcp_tool_names: list[str] <span style="color:#f92672">|</span> <span style="color:#66d9ef">None</span> <span style="color:#f92672">=</span> <span style="color:#66d9ef">None</span>) <span style="color:#f92672">-&gt;</span> list[Action]:
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;&#34;&#34;将 LLM 响应转换为 Action 列表&#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">for</span> tool_call <span style="color:#f92672">in</span> response<span style="color:#f92672">.</span>tool_calls:
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> tool_call<span style="color:#f92672">.</span>function<span style="color:#f92672">.</span>name <span style="color:#f92672">==</span> <span style="color:#e6db74">&#39;bash&#39;</span>:
+</span></span><span style="display:flex;"><span>            action <span style="color:#f92672">=</span> CmdRunAction(command<span style="color:#f92672">=</span>arguments[<span style="color:#e6db74">&#39;command&#39;</span>], <span style="color:#f92672">...</span>)
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">elif</span> tool_call<span style="color:#f92672">.</span>function<span style="color:#f92672">.</span>name <span style="color:#f92672">==</span> <span style="color:#e6db74">&#39;IPythonTool&#39;</span>:
+</span></span><span style="display:flex;"><span>            action <span style="color:#f92672">=</span> IPythonRunCellAction(code<span style="color:#f92672">=</span>arguments[<span style="color:#e6db74">&#39;code&#39;</span>])
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">elif</span> tool_call<span style="color:#f92672">.</span>function<span style="color:#f92672">.</span>name <span style="color:#f92672">==</span> <span style="color:#e6db74">&#39;finish&#39;</span>:
+</span></span><span style="display:flex;"><span>            action <span style="color:#f92672">=</span> AgentFinishAction()
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e"># ... 更多工具</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> actions
+</span></span></code></pre></div><h3 id="43-动作响应流程">4.3 动作响应流程<a hidden class="anchor" aria-hidden="true" href="#43-动作响应流程">#</a></h3>
+<pre tabindex="0"><code>LLM 响应 (ModelResponse)
+    │
+    ▼
+response_to_actions()
+    │
+    ├── tool_call.name == &#39;bash&#39;
+    │       └── CmdRunAction(command=&#39;ls -la&#39;)
+    ├── tool_call.name == &#39;IPythonTool&#39;
+    │       └── IPythonRunCellAction(code=&#39;print(&#34;hello&#34;)&#39;)
+    └── tool_call.name == &#39;finish&#39;
+            └── AgentFinishAction()
+    │
+    ▼
+返回 Action 列表
+    │
+    ▼
+AgentController 执行 Action
+    │
+    ▼
+Runtime 返回 Observation
+</code></pre><hr>
+<h2 id="5-多智能体模式">5. 多智能体模式<a hidden class="anchor" aria-hidden="true" href="#5-多智能体模式">#</a></h2>
+<h3 id="51-委托机制">5.1 委托机制<a hidden class="anchor" aria-hidden="true" href="#51-委托机制">#</a></h3>
+<p>OpenHands 支持<strong>多智能体协作</strong>，通过 <code>AgentDelegateAction</code> 实现：</p>
+<p><strong>文件</strong>: <code>/home/gdw/tutorial/OpenHands/openhands/controller/agent_controller.py</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">async</span> <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">start_delegate</span>(self, action: AgentDelegateAction) <span style="color:#f92672">-&gt;</span> <span style="color:#66d9ef">None</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;&#34;&#34;启动委托智能体处理子任务&#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># 1. 创建被委托的智能体</span>
+</span></span><span style="display:flex;"><span>    agent_cls: type[Agent] <span style="color:#f92672">=</span> Agent<span style="color:#f92672">.</span>get_cls(action<span style="color:#f92672">.</span>agent)
+</span></span><span style="display:flex;"><span>    delegate_agent <span style="color:#f92672">=</span> agent_cls(config<span style="color:#f92672">=</span>agent_config, llm_registry<span style="color:#f92672">=</span>self<span style="color:#f92672">.</span>agent<span style="color:#f92672">.</span>llm_registry)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># 2. 创建共享状态的委托状态</span>
+</span></span><span style="display:flex;"><span>    state <span style="color:#f92672">=</span> State(
+</span></span><span style="display:flex;"><span>        session_id<span style="color:#f92672">=</span>self<span style="color:#f92672">.</span>id<span style="color:#f92672">.</span>removesuffix(<span style="color:#e6db74">&#39;-delegate&#39;</span>),
+</span></span><span style="display:flex;"><span>        inputs<span style="color:#f92672">=</span>action<span style="color:#f92672">.</span>inputs <span style="color:#f92672">or</span> {},
+</span></span><span style="display:flex;"><span>        delegate_level<span style="color:#f92672">=</span>self<span style="color:#f92672">.</span>state<span style="color:#f92672">.</span>delegate_level <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>,
+</span></span><span style="display:flex;"><span>        metrics<span style="color:#f92672">=</span>self<span style="color:#f92672">.</span>state<span style="color:#f92672">.</span>metrics,  <span style="color:#75715e"># 共享指标</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e"># ...</span>
+</span></span><span style="display:flex;"><span>    )
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># 3. 创建委托控制器</span>
+</span></span><span style="display:flex;"><span>    self<span style="color:#f92672">.</span>delegate <span style="color:#f92672">=</span> AgentController(
+</span></span><span style="display:flex;"><span>        sid<span style="color:#f92672">=</span>self<span style="color:#f92672">.</span>id <span style="color:#f92672">+</span> <span style="color:#e6db74">&#39;-delegate&#39;</span>,
+</span></span><span style="display:flex;"><span>        agent<span style="color:#f92672">=</span>delegate_agent,
+</span></span><span style="display:flex;"><span>        event_stream<span style="color:#f92672">=</span>self<span style="color:#f92672">.</span>event_stream,  <span style="color:#75715e"># 共享事件流！</span>
+</span></span><span style="display:flex;"><span>        initial_state<span style="color:#f92672">=</span>state,
+</span></span><span style="display:flex;"><span>        is_delegate<span style="color:#f92672">=</span><span style="color:#66d9ef">True</span>,
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e"># ...</span>
+</span></span><span style="display:flex;"><span>    )
+</span></span></code></pre></div><h3 id="52-委托动作">5.2 委托动作<a hidden class="anchor" aria-hidden="true" href="#52-委托动作">#</a></h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#a6e22e">@dataclass</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">AgentDelegateAction</span>(Action):
+</span></span><span style="display:flex;"><span>    agent: str          <span style="color:#75715e"># 委托目标，如 &#39;BrowsingAgent&#39;</span>
+</span></span><span style="display:flex;"><span>    inputs: dict        <span style="color:#75715e"># 任务输入</span>
+</span></span><span style="display:flex;"><span>    action: str <span style="color:#f92672">=</span> ActionType<span style="color:#f92672">.</span>DELEGATE
+</span></span></code></pre></div><h3 id="53-多智能体通信模式">5.3 多智能体通信模式<a hidden class="anchor" aria-hidden="true" href="#53-多智能体通信模式">#</a></h3>
+<p><strong>共享 EventStream 模式</strong>：</p>
+<pre tabindex="0"><code>┌──────────────────────────────────────────────────────────────┐
+│                      EventStream                            │
+│  (共享消息总线)                                              │
+└──────────────────────────────────────────────────────────────┘
+         │                    │                    │
+         ▼                    ▼                    ▼
+┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐
+│ Parent Agent    │  │ Delegate Agent  │  │    Runtime      │
+│ Controller      │  │ Controller      │  │                 │
+│                 │  │                 │  │                 │
+│ - 发起委托      │  │ - 处理子任务    │  │ - 执行动作      │
+│ - 等待结果      │  │ - 返回结果      │  │ - 返回观察结果  │
+└─────────────────┘  └─────────────────┘  └─────────────────┘
+</code></pre><p><strong>特点</strong>：</p>
+<ol>
+<li>父和子<strong>共享同一个 EventStream</strong></li>
+<li>Metrics（指标）<strong>共享</strong></li>
+<li><code>delegate_level</code> 递增，用于嵌套深度限制</li>
+<li>委托结果通过 <code>AgentDelegateObservation</code> 返回</li>
+</ol>
+<h3 id="54-委托结束流程">5.4 委托结束流程<a hidden class="anchor" aria-hidden="true" href="#54-委托结束流程">#</a></h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">end_delegate</span>(self) <span style="color:#f92672">-&gt;</span> <span style="color:#66d9ef">None</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># 从委托者复制迭代计数</span>
+</span></span><span style="display:flex;"><span>    self<span style="color:#f92672">.</span>state<span style="color:#f92672">.</span>iteration_flag<span style="color:#f92672">.</span>current_value <span style="color:#f92672">=</span> (
+</span></span><span style="display:flex;"><span>        self<span style="color:#f92672">.</span>delegate<span style="color:#f92672">.</span>state<span style="color:#f92672">.</span>iteration_flag<span style="color:#f92672">.</span>current_value
+</span></span><span style="display:flex;"><span>    )
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># 发送委托结果观察</span>
+</span></span><span style="display:flex;"><span>    obs <span style="color:#f92672">=</span> AgentDelegateObservation(
+</span></span><span style="display:flex;"><span>        outputs<span style="color:#f92672">=</span>delegate_outputs,
+</span></span><span style="display:flex;"><span>        content<span style="color:#f92672">=</span>content
+</span></span><span style="display:flex;"><span>    )
+</span></span><span style="display:flex;"><span>    self<span style="color:#f92672">.</span>event_stream<span style="color:#f92672">.</span>add_event(obs, EventSource<span style="color:#f92672">.</span>AGENT)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    self<span style="color:#f92672">.</span>delegate <span style="color:#f92672">=</span> <span style="color:#66d9ef">None</span>
+</span></span></code></pre></div><h3 id="55-多智能体设计模式">5.5 多智能体设计模式<a hidden class="anchor" aria-hidden="true" href="#55-多智能体设计模式">#</a></h3>
+<table>
+  <thead>
+      <tr>
+          <th>模式</th>
+          <th>说明</th>
+          <th>使用场景</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><strong>父子委托</strong></td>
+          <td>Parent 创建 Delegate 处理子任务</td>
+          <td>任务分解</td>
+      </tr>
+      <tr>
+          <td><strong>专家路由</strong></td>
+          <td>根据任务类型路由到不同 Agent</td>
+          <td>专业分工</td>
+      </tr>
+      <tr>
+          <td><strong>层级嵌套</strong></td>
+          <td>多层委托形成树形结构</td>
+          <td>复杂任务分解</td>
+      </tr>
+      <tr>
+          <td><strong>并行执行</strong></td>
+          <td>多个 Agent 同时处理不同子任务</td>
+          <td>效率提升</td>
+      </tr>
+  </tbody>
+</table>
+<hr>
+<h2 id="6-skills-系统">6. Skills 系统<a hidden class="anchor" aria-hidden="true" href="#6-skills-系统">#</a></h2>
+<h3 id="61-什么是-skills">6.1 什么是 Skills<a hidden class="anchor" aria-hidden="true" href="#61-什么是-skills">#</a></h3>
+<p><strong>Skills</strong> 是 OpenHands 提供给智能体的 <strong>Python 函数库</strong>，通过 Jupyter/IPython 环境暴露给 Agent 调用。</p>
+<p><strong>文件</strong>: <code>/home/gdw/tutorial/OpenHands/openhands/runtime/plugins/agent_skills/</code></p>
+<h3 id="62-skill-模块">6.2 Skill 模块<a hidden class="anchor" aria-hidden="true" href="#62-skill-模块">#</a></h3>
+<table>
+  <thead>
+      <tr>
+          <th>模块</th>
+          <th>功能</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>file_ops</code></td>
+          <td>文件操作（open_file, goto_line, scroll_down, search_dir）</td>
+      </tr>
+      <tr>
+          <td><code>file_reader</code></td>
+          <td>文件读取工具</td>
+      </tr>
+      <tr>
+          <td><code>repo_ops</code></td>
+          <td>Git 仓库操作</td>
+      </tr>
+      <tr>
+          <td><code>file_editor</code></td>
+          <td>高级文件编辑</td>
+      </tr>
+  </tbody>
+</table>
+<h3 id="63-skill-使用方式">6.3 Skill 使用方式<a hidden class="anchor" aria-hidden="true" href="#63-skill-使用方式">#</a></h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#75715e"># file_ops.py</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">open_file</span>(path: str, line_number: int <span style="color:#f92672">|</span> <span style="color:#66d9ef">None</span> <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>, context_lines: int <span style="color:#f92672">=</span> <span style="color:#ae81ff">100</span>) <span style="color:#f92672">-&gt;</span> <span style="color:#66d9ef">None</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;&#34;&#34;打开文件并可选定位到指定行&#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">global</span> CURRENT_FILE, CURRENT_LINE, WINDOW
+</span></span><span style="display:flex;"><span>    CURRENT_FILE <span style="color:#f92672">=</span> os<span style="color:#f92672">.</span>path<span style="color:#f92672">.</span>abspath(path)
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># ... 实现</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Agent 通过 IPython 调用</span>
+</span></span><span style="display:flex;"><span>action <span style="color:#f92672">=</span> IPythonRunCellAction(code<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;open_file(&#34;src/main.py&#34;, line_number=50)&#39;</span>)
+</span></span></code></pre></div><h3 id="64-skill-与-tool-的区别">6.4 Skill 与 Tool 的区别<a hidden class="anchor" aria-hidden="true" href="#64-skill-与-tool-的区别">#</a></h3>
+<table>
+  <thead>
+      <tr>
+          <th>维度</th>
+          <th>Tool</th>
+          <th>Skill</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><strong>定义位置</strong></td>
+          <td>Agent._get_tools()</td>
+          <td>runtime/plugins/agent_skills/</td>
+      </tr>
+      <tr>
+          <td><strong>暴露方式</strong></td>
+          <td>LLM function calling</td>
+          <td>Python 函数</td>
+      </tr>
+      <tr>
+          <td><strong>调用方式</strong></td>
+          <td>LLM 生成 tool_call</td>
+          <td>Agent 执行 IPython 代码</td>
+      </tr>
+      <tr>
+          <td><strong>灵活性</strong></td>
+          <td>固定参数</td>
+          <td>任意 Python 代码</td>
+      </tr>
+  </tbody>
+</table>
+<hr>
+<h2 id="7-mcp-集成">7. MCP 集成<a hidden class="anchor" aria-hidden="true" href="#7-mcp-集成">#</a></h2>
+<h3 id="71-什么是-mcp">7.1 什么是 MCP<a hidden class="anchor" aria-hidden="true" href="#71-什么是-mcp">#</a></h3>
+<p><strong>MCP (Model Context Protocol)</strong> 是一种扩展智能体工具能力的协议。</p>
+<p><strong>文件</strong>: <code>/home/gdw/tutorial/OpenHands/openhands/mcp/</code></p>
+<h3 id="72-mcpclient">7.2 MCPClient<a hidden class="anchor" aria-hidden="true" href="#72-mcpclient">#</a></h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">MCPClient</span>(BaseModel):
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;&#34;&#34;连接到 MCP 服务器的工具集合&#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>    client: Optional[Client] <span style="color:#f92672">=</span> <span style="color:#66d9ef">None</span>
+</span></span><span style="display:flex;"><span>    tools: list[MCPClientTool] <span style="color:#f92672">=</span> Field(default_factory<span style="color:#f92672">=</span>list)
+</span></span><span style="display:flex;"><span>    tool_map: dict[str, MCPClientTool] <span style="color:#f92672">=</span> Field(default_factory<span style="color:#f92672">=</span>dict)
+</span></span></code></pre></div><h3 id="73-mcp-传输类型">7.3 MCP 传输类型<a hidden class="anchor" aria-hidden="true" href="#73-mcp-传输类型">#</a></h3>
+<table>
+  <thead>
+      <tr>
+          <th>传输类型</th>
+          <th>配置类</th>
+          <th>使用场景</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>StdioTransport</code></td>
+          <td><code>MCPStdioServerConfig</code></td>
+          <td>本地进程</td>
+      </tr>
+      <tr>
+          <td><code>SSETransport</code></td>
+          <td><code>MCPSSEServerConfig</code></td>
+          <td>Server-Sent Events</td>
+      </tr>
+      <tr>
+          <td><code>StreamableHttpTransport</code></td>
+          <td><code>MCPSHTTPServerConfig</code></td>
+          <td>HTTP 流式传输</td>
+      </tr>
+  </tbody>
+</table>
+<h3 id="74-mcpaction">7.4 MCPAction<a hidden class="anchor" aria-hidden="true" href="#74-mcpaction">#</a></h3>
+<p><strong>文件</strong>: <code>/home/gdw/tutorial/OpenHands/openhands/events/action/mcp.py</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#a6e22e">@dataclass</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">MCPAction</span>(Action):
+</span></span><span style="display:flex;"><span>    name: str                              <span style="color:#75715e"># MCP 工具名称</span>
+</span></span><span style="display:flex;"><span>    arguments: dict[str, Any] <span style="color:#f92672">=</span> field(default_factory<span style="color:#f92672">=</span>dict)
+</span></span><span style="display:flex;"><span>    thought: str <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;&#39;</span>
+</span></span><span style="display:flex;"><span>    action: str <span style="color:#f92672">=</span> ActionType<span style="color:#f92672">.</span>MCP
+</span></span><span style="display:flex;"><span>    runnable: ClassVar[bool] <span style="color:#f92672">=</span> <span style="color:#66d9ef">True</span>
+</span></span><span style="display:flex;"><span>    security_risk: ActionSecurityRisk <span style="color:#f92672">=</span> ActionSecurityRisk<span style="color:#f92672">.</span>UNKNOWN
+</span></span></code></pre></div><h3 id="75-mcp-工具添加到-agent">7.5 MCP 工具添加到 Agent<a hidden class="anchor" aria-hidden="true" href="#75-mcp-工具添加到-agent">#</a></h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#75715e"># Agent 初始化时</span>
+</span></span><span style="display:flex;"><span>self<span style="color:#f92672">.</span>set_mcp_tools(mcp_tools)  <span style="color:#75715e"># 从配置加载 MCP 工具</span>
+</span></span></code></pre></div><hr>
+<h2 id="8-microagent-微智能体">8. Microagent 微智能体<a hidden class="anchor" aria-hidden="true" href="#8-microagent-微智能体">#</a></h2>
+<h3 id="81-概述">8.1 概述<a hidden class="anchor" aria-hidden="true" href="#81-概述">#</a></h3>
+<p><strong>Microagent</strong> 是一种轻量级的<strong>专门知识智能体</strong>，可在对话期间被触发。</p>
+<p><strong>文件</strong>: <code>/home/gdw/tutorial/OpenHands/openhands/microagent/microagent.py</code></p>
+<h3 id="82-microagent-类型">8.2 Microagent 类型<a hidden class="anchor" aria-hidden="true" href="#82-microagent-类型">#</a></h3>
+<table>
+  <thead>
+      <tr>
+          <th>类型</th>
+          <th>触发方式</th>
+          <th>使用场景</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><code>REPO_KNOWLEDGE</code></td>
+          <td>始终激活</td>
+          <td>代码库特定指南</td>
+      </tr>
+      <tr>
+          <td><code>KNOWLEDGE</code></td>
+          <td>关键词触发</td>
+          <td>语言/框架最佳实践</td>
+      </tr>
+      <tr>
+          <td><code>TASK</code></td>
+          <td>斜杠命令（<code>/{name}</code>）</td>
+          <td>需要用户输入的任务</td>
+      </tr>
+  </tbody>
+</table>
+<h3 id="83-基类结构">8.3 基类结构<a hidden class="anchor" aria-hidden="true" href="#83-基类结构">#</a></h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">BaseMicroagent</span>(BaseModel):
+</span></span><span style="display:flex;"><span>    name: str
+</span></span><span style="display:flex;"><span>    content: str
+</span></span><span style="display:flex;"><span>    metadata: MicroagentMetadata
+</span></span><span style="display:flex;"><span>    source: str
+</span></span><span style="display:flex;"><span>    type: MicroagentType
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">KnowledgeMicroagent</span>(BaseMicroagent):
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;&#34;&#34;通过关键词触发&#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">match_trigger</span>(self, message: str) <span style="color:#f92672">-&gt;</span> str <span style="color:#f92672">|</span> <span style="color:#66d9ef">None</span>:
+</span></span><span style="display:flex;"><span>        message <span style="color:#f92672">=</span> message<span style="color:#f92672">.</span>lower()
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">for</span> trigger <span style="color:#f92672">in</span> self<span style="color:#f92672">.</span>triggers:
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">if</span> trigger<span style="color:#f92672">.</span>lower() <span style="color:#f92672">in</span> message:
+</span></span><span style="display:flex;"><span>                <span style="color:#66d9ef">return</span> trigger
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">None</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">TaskMicroagent</span>(KnowledgeMicroagent):
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;&#34;&#34;通过 /</span><span style="color:#e6db74">{name}</span><span style="color:#e6db74"> 触发，需要用户输入&#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">requires_user_input</span>(self) <span style="color:#f92672">-&gt;</span> bool:
+</span></span><span style="display:flex;"><span>        variables <span style="color:#f92672">=</span> self<span style="color:#f92672">.</span>extract_variables(self<span style="color:#f92672">.</span>content)
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> len(variables) <span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">0</span>
+</span></span></code></pre></div><h3 id="84-microagentmetadata">8.4 MicroagentMetadata<a hidden class="anchor" aria-hidden="true" href="#84-microagentmetadata">#</a></h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">MicroagentMetadata</span>(BaseModel):
+</span></span><span style="display:flex;"><span>    name: str <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;default&#39;</span>
+</span></span><span style="display:flex;"><span>    type: MicroagentType <span style="color:#f92672">=</span> MicroagentType<span style="color:#f92672">.</span>REPO_KNOWLEDGE
+</span></span><span style="display:flex;"><span>    version: str <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;1.0.0&#39;</span>
+</span></span><span style="display:flex;"><span>    agent: str <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;CodeActAgent&#39;</span>
+</span></span><span style="display:flex;"><span>    triggers: list[str] <span style="color:#f92672">=</span> []       <span style="color:#75715e"># KNOWLEDGE 类型的关键词</span>
+</span></span><span style="display:flex;"><span>    inputs: list[InputMetadata] <span style="color:#f92672">=</span> []  <span style="color:#75715e"># TASK 类型的输入</span>
+</span></span><span style="display:flex;"><span>    mcp_tools: MCPConfig <span style="color:#f92672">|</span> <span style="color:#66d9ef">None</span> <span style="color:#f92672">=</span> <span style="color:#66d9ef">None</span>  <span style="color:#75715e"># 额外的 MCP 工具</span>
+</span></span></code></pre></div><hr>
+<h2 id="9-架构图">9. 架构图<a hidden class="anchor" aria-hidden="true" href="#9-架构图">#</a></h2>
+<h3 id="91-agent-类层次结构">9.1 Agent 类层次结构<a hidden class="anchor" aria-hidden="true" href="#91-agent-类层次结构">#</a></h3>
+<pre tabindex="0"><code>                    &lt;&lt;ABC&gt;&gt;
+                     Agent
+            ┌─────────────────┐
+            │ - _registry     │
+            │ - tools[]       │
+            │ - mcp_tools{}   │
+            │ - llm           │
+            ├─────────────────┤
+            │ + step(state)   │ ← 抽象方法
+            │ + reset()       │
+            │ + name          │
+            │ + complete      │
+            │ + set_mcp_tools │
+            └────────┬────────┘
+                     │
+     ┌───────────────┼───────────────┬───────────────┬──────────────┐
+     │               │               │               │              │
+     ▼               ▼               ▼               ▼              ▼
+CodeActAgent   BrowsingAgent   ReadonlyAgent   DummyAgent     LocAgent
+ (CodeAct)        (Web)        (Read-only)     (Testing)    (Code Search)
+     │               │               │
+     │          uses:           extends:
+     │     HighLevelActionSet   CodeActAgent
+     │          from             but overrides:
+     │       BrowserGym          _get_tools()
+     ▼                           (read-only tools)
+tools/
+  ├─ bash.py          → CmdRunAction
+  ├─ ipython.py       → IPythonRunCellAction
+  ├─ str_replace_     → FileEditAction/
+    editor.py            FileReadAction
+  ├─ browser.py       → BrowseInteractiveAction
+  ├─ finish.py        → AgentFinishAction
+  ├─ think.py         → AgentThinkAction
+  ├─ task_tracker.py  → TaskTrackingAction
+  └─ condensation_    → CondensationRequestAction
+     request.py
+</code></pre><h3 id="92-agent-执行流程">9.2 Agent 执行流程<a hidden class="anchor" aria-hidden="true" href="#92-agent-执行流程">#</a></h3>
+<pre tabindex="0"><code>用户任务
+    │
+    ▼
+┌─────────────────────────────────────┐
+│       AgentController               │
+│  - 维护 State                       │
+│  - 管理主循环                        │
+└─────────────────────────────────────┘
+    │
+    ▼
+┌─────────────────────────────────────┐
+│         CodeActAgent.step()         │
+│                                     │
+│  1. 检查 pending_actions            │
+│  2. 压缩历史（如果需要）            │
+│  3. 构建 LLM 消息                    │
+│  4. 调用 LLM                        │
+│  5. 解析响应为 Actions              │
+└─────────────────────────────────────┘
+    │
+    ▼
+Actions: [CmdRunAction, FileReadAction, ...]
+    │
+    ▼
+┌─────────────────────────────────────┐
+│         EventStream.add_event()     │
+│  - 发布 Action 到事件流             │
+└─────────────────────────────────────┘
+    │
+    ▼
+┌─────────────────────────────────────┐
+│            Runtime                  │
+│  - 执行 Action                      │
+│  - 返回 Observation                 │
+└─────────────────────────────────────┘
+    │
+    ▼
+Observation → AgentController → Agent.step()
+</code></pre><hr>
+<h2 id="10-面试问题">10. 面试问题<a hidden class="anchor" aria-hidden="true" href="#10-面试问题">#</a></h2>
+<h3 id="q1-openhands-有哪些类型的-agentcodeactagent-有什么特点">Q1: OpenHands 有哪些类型的 Agent？CodeActAgent 有什么特点？<a hidden class="anchor" aria-hidden="true" href="#q1-openhands-有哪些类型的-agentcodeactagent-有什么特点">#</a></h3>
+<p><strong>参考答案</strong>：</p>
+<blockquote>
+<p>OpenHands 内置多种 Agent：</p>
+<ul>
+<li><strong>CodeActAgent</strong>：主要智能体，采用 CodeAct 方法论</li>
+<li><strong>BrowsingAgent</strong>：网页浏览专用</li>
+<li><strong>ReadonlyAgent</strong>：只读操作</li>
+<li><strong>LocAgent</strong>：代码库定位</li>
+<li><strong>DummyAgent</strong>：测试用</li>
+</ul>
+<p>CodeActAgent 的<strong>核心特点</strong>：</p>
+<ol>
+<li><strong>统一动作空间</strong>：所有工具调用统一到代码执行</li>
+<li><strong>多工具支持</strong>：bash、Python、文件编辑、浏览器</li>
+<li><strong>可配置工具集</strong>：根据配置启用/禁用不同工具</li>
+<li><strong>内置 Skills</strong>：通过 Jupyter 环境提供 Python 函数库</li>
+</ol>
+</blockquote>
+<hr>
+<h3 id="q2-什么是-codeact它相比传统工具调用有什么优势">Q2: 什么是 CodeAct？它相比传统工具调用有什么优势？<a hidden class="anchor" aria-hidden="true" href="#q2-什么是-codeact它相比传统工具调用有什么优势">#</a></h3>
+<p><strong>参考答案</strong>：</p>
+<blockquote>
+<p>CodeAct 源自论文 <a href="https://arxiv.org/abs/2402.01030">CodeAct: Towards Unified Code Actions</a>。</p>
+<p><strong>核心思想</strong>：将所有 LLM 智能体的动作统一到一个&quot;代码执行空间&quot;，智能体生成 Python 代码来描述操作，而不是调用独立的工具函数。</p>
+<p><strong>传统方式的问题</strong>：</p>
+<ul>
+<li>工具数量多（几十上百个），LLM 难以选择</li>
+<li>工具参数复杂，学习成本高</li>
+<li>难以组合复杂操作</li>
+</ul>
+<p><strong>CodeAct 的优势</strong>：</p>
+<ul>
+<li><strong>动作空间小</strong>：只需一个代码执行工具</li>
+<li><strong>自然组合</strong>：代码中可以组合多种操作</li>
+<li><strong>更贴近人类</strong>：开发者也是通过写代码来完成任务</li>
+<li><strong>灵活性高</strong>：代码逻辑可以很复杂</li>
+</ul>
+</blockquote>
+<hr>
+<h3 id="q3-openhands-的工具系统是如何设计的">Q3: OpenHands 的工具系统是如何设计的？<a hidden class="anchor" aria-hidden="true" href="#q3-openhands-的工具系统是如何设计的">#</a></h3>
+<p><strong>参考答案</strong>：</p>
+<blockquote>
+<p><strong>工具定义</strong>：</p>
+<ul>
+<li>工具定义为 <code>ChatCompletionToolParam</code> 对象（LiteLLM 格式）</li>
+<li>包含 name、description、parameters schema</li>
+</ul>
+<p><strong>工具到动作的转换</strong>：</p>
+<ul>
+<li><code>Agent._get_tools()</code> 根据配置生成工具列表</li>
+<li><code>response_to_actions()</code> 将 LLM 的 tool_call 解析为具体的 Action 类</li>
+</ul>
+<p><strong>动作执行</strong>：</p>
+<ul>
+<li>Action 发布到 EventStream</li>
+<li>Runtime 订阅并执行 Action</li>
+<li>返回 Observation</li>
+</ul>
+<p><strong>示例</strong>：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#75715e"># 工具定义</span>
+</span></span><span style="display:flex;"><span>bash_tool <span style="color:#f92672">=</span> ChatCompletionToolParam(
+</span></span><span style="display:flex;"><span>    type<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;function&#39;</span>,
+</span></span><span style="display:flex;"><span>    function<span style="color:#f92672">=</span>{
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#39;name&#39;</span>: <span style="color:#e6db74">&#39;bash&#39;</span>,
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#39;description&#39;</span>: <span style="color:#e6db74">&#39;Execute bash commands&#39;</span>,
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#39;parameters&#39;</span>: {<span style="color:#f92672">...</span>}
+</span></span><span style="display:flex;"><span>    }
+</span></span><span style="display:flex;"><span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># LLM 响应解析</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">if</span> tool_call<span style="color:#f92672">.</span>function<span style="color:#f92672">.</span>name <span style="color:#f92672">==</span> <span style="color:#e6db74">&#39;bash&#39;</span>:
+</span></span><span style="display:flex;"><span>    action <span style="color:#f92672">=</span> CmdRunAction(command<span style="color:#f92672">=</span>arguments[<span style="color:#e6db74">&#39;command&#39;</span>])
+</span></span></code></pre></div></blockquote>
+<hr>
+<h3 id="q4-openhands-如何实现多智能体协作">Q4: OpenHands 如何实现多智能体协作？<a hidden class="anchor" aria-hidden="true" href="#q4-openhands-如何实现多智能体协作">#</a></h3>
+<p><strong>参考答案</strong>：</p>
+<blockquote>
+<p>通过 <strong>AgentDelegateAction</strong> 实现多智能体协作。</p>
+<p><strong>委托流程</strong>：</p>
+<ol>
+<li>Parent Agent 发送 <code>AgentDelegateAction</code>，指定目标 Agent 类型和输入</li>
+<li>AgentController 创建 Delegate AgentController</li>
+<li>Parent 和 Delegate <strong>共享同一个 EventStream</strong></li>
+<li>Delegate 处理子任务，结果通过 <code>AgentDelegateObservation</code> 返回</li>
+</ol>
+<p><strong>共享机制</strong>：</p>
+<ul>
+<li>EventStream：消息总线共享</li>
+<li>Metrics：成本/迭代指标共享</li>
+<li>State：delegate_level 递增，隔离状态</li>
+</ul>
+<p><strong>使用场景</strong>：</p>
+<ul>
+<li>任务分解：复杂任务拆分为子任务</li>
+<li>专业分工：不同 Agent 处理不同类型任务</li>
+<li>层级嵌套：多层委托形成树形结构</li>
+</ul>
+</blockquote>
+<hr>
+<h3 id="q5-skills-和-tools-有什么区别">Q5: Skills 和 Tools 有什么区别？<a hidden class="anchor" aria-hidden="true" href="#q5-skills-和-tools-有什么区别">#</a></h3>
+<p><strong>参考答案</strong>：</p>
+<blockquote>
+<table>
+  <thead>
+      <tr>
+          <th>维度</th>
+          <th>Tool</th>
+          <th>Skill</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><strong>定义位置</strong></td>
+          <td>Agent._get_tools()</td>
+          <td>runtime/plugins/agent_skills/</td>
+      </tr>
+      <tr>
+          <td><strong>暴露给 LLM</strong></td>
+          <td>是，作为 function calling</td>
+          <td>否，通过 IPython 执行</td>
+      </tr>
+      <tr>
+          <td><strong>调用方式</strong></td>
+          <td>LLM 生成 tool_call</td>
+          <td>Agent 执行 Python 代码</td>
+      </tr>
+      <tr>
+          <td><strong>灵活性</strong></td>
+          <td>固定参数 schema</td>
+          <td>任意 Python 代码</td>
+      </tr>
+      <tr>
+          <td><strong>用途</strong></td>
+          <td>LLM 决策使用</td>
+          <td>辅助函数功能</td>
+      </tr>
+  </tbody>
+</table>
+<p><strong>配合使用</strong>：</p>
+<ul>
+<li>Tools 是 LLM 可以&quot;看到&quot;并调用的动作</li>
+<li>Skills 是 LLM 在代码中可以直接使用的函数库</li>
+<li>例如：LLM 用 <code>bash</code> tool 执行命令，在命令中调用 <code>open_file()</code> skill 函数</li>
+</ul>
+</blockquote>
+<hr>
+<h3 id="q6-mcp-是什么openhands-如何集成-mcp">Q6: MCP 是什么？OpenHands 如何集成 MCP？<a hidden class="anchor" aria-hidden="true" href="#q6-mcp-是什么openhands-如何集成-mcp">#</a></h3>
+<p><strong>参考答案</strong>：</p>
+<blockquote>
+<p><strong>MCP (Model Context Protocol)</strong> 是一种扩展智能体工具能力的协议。</p>
+<p><strong>OpenHands MCP 集成</strong>：</p>
+<ol>
+<li><strong>MCPClient</strong>：管理 MCP 连接和工具</li>
+<li><strong>MCPAction</strong>：封装 MCP 工具调用</li>
+<li><strong>传输类型</strong>：支持 Stdio、SSE、HTTP 等</li>
+</ol>
+<p><strong>添加 MCP 工具到 Agent</strong>：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>agent<span style="color:#f92672">.</span>set_mcp_tools(mcp_tools)  <span style="color:#75715e"># 从配置加载</span>
+</span></span></code></pre></div><p><strong>MCP 工具执行流程</strong>：</p>
+<ol>
+<li>LLM 选择 MCP 工具</li>
+<li>生成 MCPAction</li>
+<li>Runtime 通过 MCP client 执行</li>
+<li>返回 MCPObservation</li>
+</ol>
+</blockquote>
+<hr>
+<h3 id="q7-microagent-是什么有什么用途">Q7: Microagent 是什么？有什么用途？<a hidden class="anchor" aria-hidden="true" href="#q7-microagent-是什么有什么用途">#</a></h3>
+<p><strong>参考答案</strong>：</p>
+<blockquote>
+<p><strong>Microagent</strong> 是轻量级的专门知识智能体，可在对话期间被触发。</p>
+<p><strong>三种类型</strong>：</p>
+<ol>
+<li><strong>REPO_KNOWLEDGE</strong>：始终激活，提供代码库特定指南</li>
+<li><strong>KNOWLEDGE</strong>：通过关键词触发，如&quot;Python&quot;、&ldquo;React&rdquo;</li>
+<li><strong>TASK</strong>：通过斜杠命令触发，如<code>/review</code>、<code>/test</code></li>
+</ol>
+<p><strong>使用场景</strong>：</p>
+<ul>
+<li>代码规范注入（REPO_KNOWLEDGE）</li>
+<li>框架最佳实践（KNOWLEDGE）</li>
+<li>特定任务执行（TASK）</li>
+</ul>
+<p><strong>触发示例</strong>：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#75715e"># KNOWLEDGE 类型</span>
+</span></span><span style="display:flex;"><span>triggers <span style="color:#f92672">=</span> [<span style="color:#e6db74">&#39;python&#39;</span>, <span style="color:#e6db74">&#39;django&#39;</span>]
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">if</span> <span style="color:#e6db74">&#39;python&#39;</span> <span style="color:#f92672">in</span> user_message:
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># 注入 Python 最佳实践</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># TASK 类型</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">/</span>deploy <span style="color:#f92672">--</span>env<span style="color:#f92672">=</span>production  <span style="color:#75715e"># 触发部署任务</span>
+</span></span></code></pre></div></blockquote>
+<hr>
+<h3 id="q8-如何自定义开发一个新的-agent">Q8: 如何自定义开发一个新的 Agent？<a hidden class="anchor" aria-hidden="true" href="#q8-如何自定义开发一个新的-agent">#</a></h3>
+<p><strong>参考答案</strong>：</p>
+<blockquote>
+<p><strong>步骤</strong>：</p>
+<ol>
+<li><strong>继承 Agent 基类</strong></li>
+</ol>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#f92672">from</span> openhands.controller.agent <span style="color:#f92672">import</span> Agent
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">MyAgent</span>(Agent):
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">step</span>(self, state: State) <span style="color:#f92672">-&gt;</span> Action:
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e"># 实现决策逻辑</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">pass</span>
+</span></span></code></pre></div><ol start="2">
+<li><strong>注册 Agent</strong></li>
+</ol>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>Agent<span style="color:#f92672">.</span>register(<span style="color:#e6db74">&#39;my_agent&#39;</span>, MyAgent)
+</span></span></code></pre></div><ol start="3">
+<li><strong>配置使用</strong></li>
+</ol>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#75715e"># config.toml</span>
+</span></span><span style="display:flex;"><span>[agent]
+</span></span><span style="display:flex;"><span>name <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;my_agent&#34;</span>
+</span></span></code></pre></div><p><strong>可选：自定义工具</strong></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">_get_tools</span>(self):
+</span></span><span style="display:flex;"><span>    tools <span style="color:#f92672">=</span> super()<span style="color:#f92672">.</span>_get_tools()
+</span></span><span style="display:flex;"><span>    tools<span style="color:#f92672">.</span>append(my_custom_tool)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> tools
+</span></span></code></pre></div></blockquote>
+<hr>
+<h3 id="q9-agent-的类注册模式有什么好处">Q9: Agent 的类注册模式有什么好处？<a hidden class="anchor" aria-hidden="true" href="#q9-agent-的类注册模式有什么好处">#</a></h3>
+<p><strong>参考答案</strong>：</p>
+<blockquote>
+<p><strong>类注册模式</strong>允许动态发现和加载 Agent。</p>
+<p><strong>好处</strong>：</p>
+<ol>
+<li><strong>松耦合</strong>：Agent 使用方不需要硬编码导入</li>
+<li><strong>插件化</strong>：新增 Agent 无需修改框架代码</li>
+<li><strong>运行时选择</strong>：可以动态选择使用哪个 Agent</li>
+<li><strong>配置驱动</strong>：通过配置指定 Agent 类型</li>
+</ol>
+<p><strong>实现</strong>：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#75715e"># 框架代码</span>
+</span></span><span style="display:flex;"><span>agent_cls <span style="color:#f92672">=</span> Agent<span style="color:#f92672">.</span>get_cls(config<span style="color:#f92672">.</span>name)
+</span></span><span style="display:flex;"><span>agent <span style="color:#f92672">=</span> agent_cls(config, llm_registry)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 插件代码</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">@register</span>(<span style="color:#e6db74">&#39;my_agent&#39;</span>)
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">MyAgent</span>(Agent):
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">pass</span>
+</span></span></code></pre></div></blockquote>
+<hr>
+<h3 id="q10-openhands-的工具有哪些安全考虑">Q10: OpenHands 的工具有哪些安全考虑？<a hidden class="anchor" aria-hidden="true" href="#q10-openhands-的工具有哪些安全考虑">#</a></h3>
+<p><strong>参考答案</strong>：</p>
+<blockquote>
+<p><strong>工具层面</strong>：</p>
+<ul>
+<li>高风险操作（如删除文件）有安全风险标记</li>
+<li><code>confirmation_mode</code> 可以要求用户确认</li>
+<li><code>security_analyzer</code> 分析动作风险</li>
+</ul>
+<p><strong>执行层面</strong>：</p>
+<ul>
+<li>Runtime 在隔离环境（Docker/K8s）中执行</li>
+<li>LocalRuntime 有明确警告，无沙箱隔离</li>
+</ul>
+<p><strong>EventStream 层面</strong>：</p>
+<ul>
+<li><code>hidden=True</code> 的敏感操作不记录到历史</li>
+<li>敏感信息在存储前被替换</li>
+</ul>
+<p><strong>配置示例</strong>：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#75715e"># 高风险动作需要确认</span>
+</span></span><span style="display:flex;"><span>CmdRunAction(
+</span></span><span style="display:flex;"><span>    command<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;rm -rf /&#39;</span>,
+</span></span><span style="display:flex;"><span>    confirmation_state<span style="color:#f92672">=</span>ActionConfirmationStatus<span style="color:#f92672">.</span>REQUIRE_CONFIRMATION
+</span></span><span style="display:flex;"><span>)
+</span></span></code></pre></div></blockquote>
+
+
+  </div>
+
+  <footer class="post-footer">
+    <ul class="post-tags">
+    </ul>
+  </footer>
+</article>
+    </main>
+    
+<footer class="footer">
+        <span>&copy; 2026 <a href="http://localhost:1313/">My New Hugo Project</a></span> · 
+
+    <span>
+        Powered by
+        <a href="https://gohugo.io/" rel="noopener noreferrer" target="_blank">Hugo</a> &
+        <a href="https://github.com/adityatelange/hugo-PaperMod/" rel="noopener" target="_blank">PaperMod</a>
+    </span>
+</footer>
+<a href="#top" aria-label="go to top" title="Go to Top (Alt + G)" class="top-link" id="top-link" accesskey="g">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 6" fill="currentColor">
+        <path d="M12 6H0l6-6z" />
+    </svg>
+</a>
+
+<script>
+    let menu = document.getElementById('menu');
+    if (menu) {
+        
+        const scrollPosition = localStorage.getItem("menu-scroll-position");
+        if (scrollPosition) {
+            menu.scrollLeft = parseInt(scrollPosition, 10);
+        }
+        
+        menu.onscroll = function () {
+            localStorage.setItem("menu-scroll-position", menu.scrollLeft);
+        }
+    }
+
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener("click", function (e) {
+            e.preventDefault();
+            var id = this.getAttribute("href").substr(1);
+            if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView({
+                    behavior: "smooth"
+                });
+            } else {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView();
+            }
+            if (id === "top") {
+                history.replaceState(null, null, " ");
+            } else {
+                history.pushState(null, null, `#${id}`);
+            }
+        });
+    });
+
+</script>
+<script>
+    var mybutton = document.getElementById("top-link");
+    window.onscroll = function () {
+        if (document.body.scrollTop > 800 || document.documentElement.scrollTop > 800) {
+            mybutton.style.visibility = "visible";
+            mybutton.style.opacity = "1";
+        } else {
+            mybutton.style.visibility = "hidden";
+            mybutton.style.opacity = "0";
+        }
+    };
+
+</script>
+<script>
+    document.getElementById("theme-toggle").addEventListener("click", () => {
+        const html = document.querySelector("html");
+        if (html.dataset.theme === "dark") {
+            html.dataset.theme = 'light';
+            localStorage.setItem("pref-theme", 'light');
+        } else {
+            html.dataset.theme = 'dark';
+            localStorage.setItem("pref-theme", 'dark');
+        }
+    })
+
+</script>
+</body>
+
+</html>

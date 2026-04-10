@@ -1,0 +1,1211 @@
+<!DOCTYPE html>
+<html lang="en" dir="auto" data-theme="auto">
+
+<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script><meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<meta name="robots" content="noindex, nofollow">
+<title>Openhand_event_stream | My New Hugo Project</title>
+<meta name="keywords" content="">
+<meta name="description" content="目录
+
+概述
+Event 类层次结构
+EventStream 实现
+EventStore 持久化
+发布-订阅机制
+事件流转
+事件序列化
+设计模式
+架构流程图
+面试问题
+
+
+1. 概述
+1.1 什么是 EventStream
+EventStream 是 OpenHands 的中央消息总线，采用发布-订阅（Pub/Sub）模式连接所有组件。
+文件: /home/gdw/tutorial/OpenHands/openhands/events/stream.py
+1.2 核心功能
+EventStream
+    │
+    ├── 发布/订阅机制
+    ├── 事件持久化
+    ├── 异步事件分发
+    ├── 秘密替换
+    └── 写缓存优化
+
+2. Event 类层次结构
+2.1 基类 Event
+文件: /home/gdw/tutorial/OpenHands/openhands/events/event.py
+@dataclass
+class Event:
+    INVALID_ID = -1
+    # 属性
+    id: int                      # 唯一标识
+    timestamp: str                # ISO 时间戳
+    source: EventSource           # 来源 (AGENT/USER/ENVIRONMENT)
+    cause: int                    # 触发事件的 ID
+    timeout: float | None         # 超时时间
+2.2 EventSource 枚举
+class EventSource(str, Enum):
+    AGENT = &#39;agent&#39;          # 智能体发出
+    USER = &#39;user&#39;            # 用户发出
+    ENVIRONMENT = &#39;environment&#39;  # 环境发出
+2.3 Action 和 Observation
+# Action - 智能体发出的动作请求
+@dataclass
+class Action(Event):
+    runnable: ClassVar[bool] = False  # 是否可执行
+
+# Observation - 执行结果
+@dataclass
+class Observation(Event):
+    content: str  # 结果内容
+2.4 完整事件层次
+Event (基类)
+├── Action (动作请求)
+│   ├── CmdRunAction           # 运行命令
+│   ├── IPythonRunCellAction   # 运行 Python
+│   ├── BrowseURLAction        # 浏览 URL
+│   ├── BrowseInteractiveAction # 交互浏览
+│   ├── FileReadAction         # 读文件
+│   ├── FileWriteAction        # 写文件
+│   ├── FileEditAction         # 编辑文件
+│   ├── MCPAction              # MCP 工具调用
+│   ├── MessageAction          # 消息
+│   ├── AgentThinkAction       # 思考
+│   ├── AgentFinishAction      # 完成任务
+│   ├── AgentRejectAction      # 拒绝任务
+│   ├── AgentDelegateAction    # 委托
+│   ├── CondensationRequestAction  # 请求压缩
+│   └── NullAction             # 空动作
+│
+└── Observation (执行结果)
+    ├── CmdOutputObservation    # 命令输出
+    ├── IPythonRunCellObservation
+    ├── BrowserOutputObservation
+    ├── FileReadObservation
+    ├── ErrorObservation        # 错误
+    ├── SuccessObservation      # 成功
+    ├── AgentDelegateObservation # 委托结果
+    ├── MCPObservation         # MCP 结果
+    ├── RecallObservation      # 记忆检索
+    └── NullObservation         # 空观察
+2.5 关键 Action 类
+文件: /home/gdw/tutorial/OpenHands/openhands/events/action/commands.py">
+<meta name="author" content="">
+<link rel="canonical" href="http://localhost:1313/posts/openhand_event_stream/">
+<link crossorigin="anonymous" href="/assets/css/stylesheet.199042e659bc7245f5609d333d6c044eb554a0640849bb874e1dff8eb0f57209.css" integrity="sha256-GZBC5lm8ckX1YJ0zPWwETrVUoGQISbuHTh3/jrD1cgk=" rel="preload stylesheet" as="style">
+<link rel="icon" href="http://localhost:1313/favicon.ico">
+<link rel="icon" type="image/png" sizes="16x16" href="http://localhost:1313/favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="http://localhost:1313/favicon-32x32.png">
+<link rel="apple-touch-icon" href="http://localhost:1313/apple-touch-icon.png">
+<link rel="mask-icon" href="http://localhost:1313/safari-pinned-tab.svg">
+<meta name="theme-color" content="#2e2e33">
+<meta name="msapplication-TileColor" content="#2e2e33">
+<link rel="alternate" hreflang="en" href="http://localhost:1313/posts/openhand_event_stream/">
+<noscript>
+    <style>
+        #theme-toggle,
+        .top-link {
+            display: none;
+        }
+
+    </style>
+    <style>
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --theme: rgb(29, 30, 32);
+                --entry: rgb(46, 46, 51);
+                --primary: rgb(218, 218, 219);
+                --secondary: rgb(155, 156, 157);
+                --tertiary: rgb(65, 66, 68);
+                --content: rgb(196, 196, 197);
+                --code-block-bg: rgb(46, 46, 51);
+                --code-bg: rgb(55, 56, 62);
+                --border: rgb(51, 51, 51);
+                color-scheme: dark;
+            }
+
+            .list {
+                background: var(--theme);
+            }
+
+            .toc {
+                background: var(--entry);
+            }
+        }
+
+        @media (prefers-color-scheme: light) {
+            .list::-webkit-scrollbar-thumb {
+                border-color: var(--code-bg);
+            }
+        }
+
+    </style>
+</noscript>
+<script>
+    if (localStorage.getItem("pref-theme") === "dark") {
+        document.querySelector("html").dataset.theme = 'dark';
+    } else if (localStorage.getItem("pref-theme") === "light") {
+       document.querySelector("html").dataset.theme = 'light';
+    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.querySelector("html").dataset.theme = 'dark';
+    } else {
+        document.querySelector("html").dataset.theme = 'light';
+    }
+
+</script>
+</head>
+<body id="top">
+    <header class="header">
+    <nav class="nav">
+        <div class="logo">
+            <a href="http://localhost:1313/" accesskey="h" title="My New Hugo Project (Alt + H)">My New Hugo Project</a>
+            <div class="logo-switches">
+                <button id="theme-toggle" accesskey="t" title="(Alt + T)" aria-label="Toggle theme">
+                    <svg id="moon" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                    <svg id="sun" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <ul id="menu">
+        </ul>
+    </nav>
+</header>
+<main class="main">
+
+<article class="post-single">
+  <header class="post-header">
+    
+    <h1 class="post-title entry-hint-parent">
+      Openhand_event_stream
+    </h1>
+    <div class="post-meta"><span title='2026-04-10 09:51:41 +0800 CST'>April 10, 2026</span>
+
+</div>
+  </header> 
+  <div class="post-content"><h2 id="目录">目录<a hidden class="anchor" aria-hidden="true" href="#目录">#</a></h2>
+<ol>
+<li><a href="#1-%E6%A6%82%E8%BF%B0">概述</a></li>
+<li><a href="#2-event-%E7%B1%BB%E5%B1%82%E6%AC%A1%E7%BB%93%E6%9E%84">Event 类层次结构</a></li>
+<li><a href="#3-eventstream-%E5%AE%9E%E7%8E%B0">EventStream 实现</a></li>
+<li><a href="#4-eventstore-%E6%8C%81%E4%B9%85%E5%8C%96">EventStore 持久化</a></li>
+<li><a href="#5-%E5%8F%91%E5%B8%83-%E8%AE%A2%E9%98%85%E6%9C%BA%E5%88%B6">发布-订阅机制</a></li>
+<li><a href="#6-%E4%BA%8B%E4%BB%B6%E6%B5%81%E8%BD%AC">事件流转</a></li>
+<li><a href="#7-%E4%BA%8B%E4%BB%B6%E5%BA%8F%E5%88%97%E5%8C%96">事件序列化</a></li>
+<li><a href="#8-%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F">设计模式</a></li>
+<li><a href="#9-%E6%9E%B6%E6%9E%84%E6%B5%81%E7%A8%8B%E5%9B%BE">架构流程图</a></li>
+<li><a href="#10-%E9%9D%A2%E8%AF%95%E9%97%AE%E9%A2%98">面试问题</a></li>
+</ol>
+<hr>
+<h2 id="1-概述">1. 概述<a hidden class="anchor" aria-hidden="true" href="#1-概述">#</a></h2>
+<h3 id="11-什么是-eventstream">1.1 什么是 EventStream<a hidden class="anchor" aria-hidden="true" href="#11-什么是-eventstream">#</a></h3>
+<p><strong>EventStream</strong> 是 OpenHands 的<strong>中央消息总线</strong>，采用发布-订阅（Pub/Sub）模式连接所有组件。</p>
+<p><strong>文件</strong>: <code>/home/gdw/tutorial/OpenHands/openhands/events/stream.py</code></p>
+<h3 id="12-核心功能">1.2 核心功能<a hidden class="anchor" aria-hidden="true" href="#12-核心功能">#</a></h3>
+<pre tabindex="0"><code>EventStream
+    │
+    ├── 发布/订阅机制
+    ├── 事件持久化
+    ├── 异步事件分发
+    ├── 秘密替换
+    └── 写缓存优化
+</code></pre><hr>
+<h2 id="2-event-类层次结构">2. Event 类层次结构<a hidden class="anchor" aria-hidden="true" href="#2-event-类层次结构">#</a></h2>
+<h3 id="21-基类-event">2.1 基类 Event<a hidden class="anchor" aria-hidden="true" href="#21-基类-event">#</a></h3>
+<p><strong>文件</strong>: <code>/home/gdw/tutorial/OpenHands/openhands/events/event.py</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#a6e22e">@dataclass</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">Event</span>:
+</span></span><span style="display:flex;"><span>    INVALID_ID <span style="color:#f92672">=</span> <span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># 属性</span>
+</span></span><span style="display:flex;"><span>    id: int                      <span style="color:#75715e"># 唯一标识</span>
+</span></span><span style="display:flex;"><span>    timestamp: str                <span style="color:#75715e"># ISO 时间戳</span>
+</span></span><span style="display:flex;"><span>    source: EventSource           <span style="color:#75715e"># 来源 (AGENT/USER/ENVIRONMENT)</span>
+</span></span><span style="display:flex;"><span>    cause: int                    <span style="color:#75715e"># 触发事件的 ID</span>
+</span></span><span style="display:flex;"><span>    timeout: float <span style="color:#f92672">|</span> <span style="color:#66d9ef">None</span>         <span style="color:#75715e"># 超时时间</span>
+</span></span></code></pre></div><h3 id="22-eventsource-枚举">2.2 EventSource 枚举<a hidden class="anchor" aria-hidden="true" href="#22-eventsource-枚举">#</a></h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">EventSource</span>(str, Enum):
+</span></span><span style="display:flex;"><span>    AGENT <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;agent&#39;</span>          <span style="color:#75715e"># 智能体发出</span>
+</span></span><span style="display:flex;"><span>    USER <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;user&#39;</span>            <span style="color:#75715e"># 用户发出</span>
+</span></span><span style="display:flex;"><span>    ENVIRONMENT <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;environment&#39;</span>  <span style="color:#75715e"># 环境发出</span>
+</span></span></code></pre></div><h3 id="23-action-和-observation">2.3 Action 和 Observation<a hidden class="anchor" aria-hidden="true" href="#23-action-和-observation">#</a></h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#75715e"># Action - 智能体发出的动作请求</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">@dataclass</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">Action</span>(Event):
+</span></span><span style="display:flex;"><span>    runnable: ClassVar[bool] <span style="color:#f92672">=</span> <span style="color:#66d9ef">False</span>  <span style="color:#75715e"># 是否可执行</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Observation - 执行结果</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">@dataclass</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">Observation</span>(Event):
+</span></span><span style="display:flex;"><span>    content: str  <span style="color:#75715e"># 结果内容</span>
+</span></span></code></pre></div><h3 id="24-完整事件层次">2.4 完整事件层次<a hidden class="anchor" aria-hidden="true" href="#24-完整事件层次">#</a></h3>
+<pre tabindex="0"><code>Event (基类)
+├── Action (动作请求)
+│   ├── CmdRunAction           # 运行命令
+│   ├── IPythonRunCellAction   # 运行 Python
+│   ├── BrowseURLAction        # 浏览 URL
+│   ├── BrowseInteractiveAction # 交互浏览
+│   ├── FileReadAction         # 读文件
+│   ├── FileWriteAction        # 写文件
+│   ├── FileEditAction         # 编辑文件
+│   ├── MCPAction              # MCP 工具调用
+│   ├── MessageAction          # 消息
+│   ├── AgentThinkAction       # 思考
+│   ├── AgentFinishAction      # 完成任务
+│   ├── AgentRejectAction      # 拒绝任务
+│   ├── AgentDelegateAction    # 委托
+│   ├── CondensationRequestAction  # 请求压缩
+│   └── NullAction             # 空动作
+│
+└── Observation (执行结果)
+    ├── CmdOutputObservation    # 命令输出
+    ├── IPythonRunCellObservation
+    ├── BrowserOutputObservation
+    ├── FileReadObservation
+    ├── ErrorObservation        # 错误
+    ├── SuccessObservation      # 成功
+    ├── AgentDelegateObservation # 委托结果
+    ├── MCPObservation         # MCP 结果
+    ├── RecallObservation      # 记忆检索
+    └── NullObservation         # 空观察
+</code></pre><h3 id="25-关键-action-类">2.5 关键 Action 类<a hidden class="anchor" aria-hidden="true" href="#25-关键-action-类">#</a></h3>
+<p><strong>文件</strong>: <code>/home/gdw/tutorial/OpenHands/openhands/events/action/commands.py</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#a6e22e">@dataclass</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">CmdRunAction</span>(Action):
+</span></span><span style="display:flex;"><span>    command: str
+</span></span><span style="display:flex;"><span>    is_input: bool <span style="color:#f92672">=</span> <span style="color:#66d9ef">False</span>
+</span></span><span style="display:flex;"><span>    thought: str <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;&#39;</span>
+</span></span><span style="display:flex;"><span>    blocking: bool <span style="color:#f92672">=</span> <span style="color:#66d9ef">False</span>
+</span></span><span style="display:flex;"><span>    is_static: bool <span style="color:#f92672">=</span> <span style="color:#66d9ef">False</span>
+</span></span><span style="display:flex;"><span>    cwd: str <span style="color:#f92672">|</span> <span style="color:#66d9ef">None</span> <span style="color:#f92672">=</span> <span style="color:#66d9ef">None</span>
+</span></span><span style="display:flex;"><span>    hidden: bool <span style="color:#f92672">=</span> <span style="color:#66d9ef">False</span>
+</span></span><span style="display:flex;"><span>    action: str <span style="color:#f92672">=</span> ActionType<span style="color:#f92672">.</span>RUN
+</span></span><span style="display:flex;"><span>    runnable: ClassVar[bool] <span style="color:#f92672">=</span> <span style="color:#66d9ef">True</span>
+</span></span><span style="display:flex;"><span>    confirmation_state: ActionConfirmationStatus <span style="color:#f92672">=</span> ActionConfirmationStatus<span style="color:#f92672">.</span>CONFIRMED
+</span></span><span style="display:flex;"><span>    security_risk: ActionSecurityRisk <span style="color:#f92672">=</span> ActionSecurityRisk<span style="color:#f92672">.</span>UNKNOWN
+</span></span></code></pre></div><h3 id="26-关键-observation-类">2.6 关键 Observation 类<a hidden class="anchor" aria-hidden="true" href="#26-关键-observation-类">#</a></h3>
+<p><strong>文件</strong>: <code>/home/gdw/tutorial/OpenHands/openhands/events/observation/commands.py</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#a6e22e">@dataclass</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">CmdOutputObservation</span>(Observation):
+</span></span><span style="display:flex;"><span>    command: str
+</span></span><span style="display:flex;"><span>    observation: str <span style="color:#f92672">=</span> ObservationType<span style="color:#f92672">.</span>RUN
+</span></span><span style="display:flex;"><span>    metadata: CmdOutputMetadata <span style="color:#f92672">=</span> field(default_factory<span style="color:#f92672">=</span>CmdOutputMetadata)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">CmdOutputMetadata</span>(BaseModel):
+</span></span><span style="display:flex;"><span>    exit_code: int <span style="color:#f92672">=</span> <span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span>    pid: int <span style="color:#f92672">=</span> <span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span>    username: str <span style="color:#f92672">|</span> <span style="color:#66d9ef">None</span> <span style="color:#f92672">=</span> <span style="color:#66d9ef">None</span>
+</span></span><span style="display:flex;"><span>    hostname: str <span style="color:#f92672">|</span> <span style="color:#66d9ef">None</span> <span style="color:#f92672">=</span> <span style="color:#66d9ef">None</span>
+</span></span><span style="display:flex;"><span>    working_dir: str <span style="color:#f92672">|</span> <span style="color:#66d9ef">None</span> <span style="color:#f92672">=</span> <span style="color:#66d9ef">None</span>
+</span></span><span style="display:flex;"><span>    py_interpreter_path: str <span style="color:#f92672">|</span> <span style="color:#66d9ef">None</span> <span style="color:#f92672">=</span> <span style="color:#66d9ef">None</span>
+</span></span><span style="display:flex;"><span>    prefix: str <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;&#39;</span>
+</span></span><span style="display:flex;"><span>    suffix: str <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;&#39;</span>
+</span></span></code></pre></div><hr>
+<h2 id="3-eventstream-实现">3. EventStream 实现<a hidden class="anchor" aria-hidden="true" href="#3-eventstream-实现">#</a></h2>
+<h3 id="31-类结构">3.1 类结构<a hidden class="anchor" aria-hidden="true" href="#31-类结构">#</a></h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">EventStream</span>(EventStore):
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># 订阅者管理</span>
+</span></span><span style="display:flex;"><span>    _subscribers: dict[str, dict[str, Callable]]  <span style="color:#75715e"># subscriber_id -&gt; callback_id -&gt; callback</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># 异步处理</span>
+</span></span><span style="display:flex;"><span>    _queue: queue<span style="color:#f92672">.</span>Queue[Event]            <span style="color:#75715e"># 事件队列</span>
+</span></span><span style="display:flex;"><span>    _queue_thread: threading<span style="color:#f92672">.</span>Thread        <span style="color:#75715e"># 队列处理线程</span>
+</span></span><span style="display:flex;"><span>    _queue_loop: asyncio<span style="color:#f92672">.</span>AbstractEventLoop <span style="color:#f92672">|</span> <span style="color:#66d9ef">None</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># 线程池</span>
+</span></span><span style="display:flex;"><span>    _thread_pools: dict[str, dict[str, ThreadPoolExecutor]]
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># 秘密管理</span>
+</span></span><span style="display:flex;"><span>    secrets: dict[str, str]
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># 写缓存</span>
+</span></span><span style="display:flex;"><span>    _write_page_cache: list[dict]
+</span></span></code></pre></div><h3 id="32-添加事件">3.2 添加事件<a hidden class="anchor" aria-hidden="true" href="#32-添加事件">#</a></h3>
+<p><strong>文件</strong>: <code>/home/gdw/tutorial/OpenHands/openhands/events/stream.py</code> (lines 163-203)</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">add_event</span>(self, event: Event, source: EventSource) <span style="color:#f92672">-&gt;</span> <span style="color:#66d9ef">None</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># 1. 验证事件没有 ID（防止循环）</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> event<span style="color:#f92672">.</span>id <span style="color:#f92672">!=</span> Event<span style="color:#f92672">.</span>INVALID_ID:
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">raise</span> <span style="color:#a6e22e">ValueError</span>(
+</span></span><span style="display:flex;"><span>            <span style="color:#e6db74">f</span><span style="color:#e6db74">&#39;Event already has an ID. &#39;</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#e6db74">&#39;It was probably added back to the EventStream from inside a handler.&#39;</span>
+</span></span><span style="display:flex;"><span>        )
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># 2. 设置时间戳和来源</span>
+</span></span><span style="display:flex;"><span>    event<span style="color:#f92672">.</span>_timestamp <span style="color:#f92672">=</span> datetime<span style="color:#f92672">.</span>now()<span style="color:#f92672">.</span>isoformat()
+</span></span><span style="display:flex;"><span>    event<span style="color:#f92672">.</span>_source <span style="color:#f92672">=</span> source
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># 3. 分配唯一 ID</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">with</span> self<span style="color:#f92672">.</span>_lock:
+</span></span><span style="display:flex;"><span>        event<span style="color:#f92672">.</span>_id <span style="color:#f92672">=</span> self<span style="color:#f92672">.</span>cur_id
+</span></span><span style="display:flex;"><span>        self<span style="color:#f92672">.</span>cur_id <span style="color:#f92672">+=</span> <span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e"># 4. 序列化为字典</span>
+</span></span><span style="display:flex;"><span>        data <span style="color:#f92672">=</span> event_to_dict(event)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e"># 5. 替换敏感信息</span>
+</span></span><span style="display:flex;"><span>        data <span style="color:#f92672">=</span> self<span style="color:#f92672">.</span>_replace_secrets(data)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e"># 6. 缓存写</span>
+</span></span><span style="display:flex;"><span>        current_write_page <span style="color:#f92672">=</span> self<span style="color:#f92672">.</span>_write_page_cache
+</span></span><span style="display:flex;"><span>        current_write_page<span style="color:#f92672">.</span>append(data)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e"># 7. 达到缓存大小时持久化</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> len(current_write_page) <span style="color:#f92672">==</span> self<span style="color:#f92672">.</span>cache_size:
+</span></span><span style="display:flex;"><span>            self<span style="color:#f92672">.</span>_write_page_cache <span style="color:#f92672">=</span> []
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># 8. 持久化到文件</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> event<span style="color:#f92672">.</span>id <span style="color:#f92672">is</span> <span style="color:#f92672">not</span> <span style="color:#66d9ef">None</span>:
+</span></span><span style="display:flex;"><span>        event_json <span style="color:#f92672">=</span> json<span style="color:#f92672">.</span>dumps(data)
+</span></span><span style="display:flex;"><span>        filename <span style="color:#f92672">=</span> self<span style="color:#f92672">.</span>_get_filename_for_id(event<span style="color:#f92672">.</span>id, self<span style="color:#f92672">.</span>user_id)
+</span></span><span style="display:flex;"><span>        self<span style="color:#f92672">.</span>file_store<span style="color:#f92672">.</span>write(filename, event_json)
+</span></span><span style="display:flex;"><span>        self<span style="color:#f92672">.</span>_store_cache_page(current_write_page)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># 9. 加入队列异步分发</span>
+</span></span><span style="display:flex;"><span>    self<span style="color:#f92672">.</span>_queue<span style="color:#f92672">.</span>put(event)
+</span></span></code></pre></div><hr>
+<h2 id="4-eventstore-持久化">4. EventStore 持久化<a hidden class="anchor" aria-hidden="true" href="#4-eventstore-持久化">#</a></h2>
+<h3 id="41-eventstoreabc-抽象基类">4.1 EventStoreABC 抽象基类<a hidden class="anchor" aria-hidden="true" href="#41-eventstoreabc-抽象基类">#</a></h3>
+<p><strong>文件</strong>: <code>/home/gdw/tutorial/OpenHands/openhands/events/event_store_abc.py</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">EventStoreABC</span>:
+</span></span><span style="display:flex;"><span>    sid: str
+</span></span><span style="display:flex;"><span>    user_id: str <span style="color:#f92672">|</span> <span style="color:#66d9ef">None</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">@abstractmethod</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">search_events</span>(
+</span></span><span style="display:flex;"><span>        self,
+</span></span><span style="display:flex;"><span>        start_id: int <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>,
+</span></span><span style="display:flex;"><span>        end_id: int <span style="color:#f92672">|</span> <span style="color:#66d9ef">None</span> <span style="color:#f92672">=</span> <span style="color:#66d9ef">None</span>,
+</span></span><span style="display:flex;"><span>        reverse: bool <span style="color:#f92672">=</span> <span style="color:#66d9ef">False</span>,
+</span></span><span style="display:flex;"><span>        filter: EventFilter <span style="color:#f92672">|</span> <span style="color:#66d9ef">None</span> <span style="color:#f92672">=</span> <span style="color:#66d9ef">None</span>,
+</span></span><span style="display:flex;"><span>        limit: int <span style="color:#f92672">|</span> <span style="color:#66d9ef">None</span> <span style="color:#f92672">=</span> <span style="color:#66d9ef">None</span>,
+</span></span><span style="display:flex;"><span>    ) <span style="color:#f92672">-&gt;</span> Iterable[Event]:
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#34;&#34;&#34;检索事件&#34;&#34;&#34;</span>
+</span></span></code></pre></div><h3 id="42-文件存储结构">4.2 文件存储结构<a hidden class="anchor" aria-hidden="true" href="#42-文件存储结构">#</a></h3>
+<pre tabindex="0"><code>sessions/{sid}/
+├── events/
+│   ├── 0.json
+│   ├── 1.json
+│   └── ...
+├── event_cache/
+│   ├── 0-25.json      # 缓存页
+│   └── ...
+└── metadata.json
+</code></pre><h3 id="43-缓存机制">4.3 缓存机制<a hidden class="anchor" aria-hidden="true" href="#43-缓存机制">#</a></h3>
+<p><strong>文件</strong>: <code>/home/gdw/tutorial/OpenHands/openhands/events/event_store.py</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#a6e22e">@dataclass</span>(frozen<span style="color:#f92672">=</span><span style="color:#66d9ef">True</span>)
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">_CachePage</span>:
+</span></span><span style="display:flex;"><span>    events: list[dict] <span style="color:#f92672">|</span> <span style="color:#66d9ef">None</span>
+</span></span><span style="display:flex;"><span>    start: int
+</span></span><span style="display:flex;"><span>    end: int
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">covers</span>(self, global_index: int) <span style="color:#f92672">-&gt;</span> bool:
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> self<span style="color:#f92672">.</span>start <span style="color:#f92672">&lt;=</span> global_index <span style="color:#f92672">&lt;</span> self<span style="color:#f92672">.</span>end
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">get_event</span>(self, global_index: int) <span style="color:#f92672">-&gt;</span> Event <span style="color:#f92672">|</span> <span style="color:#66d9ef">None</span>:
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> <span style="color:#f92672">not</span> self<span style="color:#f92672">.</span>events:
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">None</span>
+</span></span><span style="display:flex;"><span>        local_index <span style="color:#f92672">=</span> global_index <span style="color:#f92672">-</span> self<span style="color:#f92672">.</span>start
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> event_from_dict(self<span style="color:#f92672">.</span>events[local_index])
+</span></span></code></pre></div><p><strong>缓存优化</strong>：</p>
+<ul>
+<li>默认缓存 25 个事件</li>
+<li>批量读取时从缓存页获取</li>
+<li>减少文件 I/O 操作</li>
+</ul>
+<h3 id="44-嵌套-eventstore">4.4 嵌套 EventStore<a hidden class="anchor" aria-hidden="true" href="#44-嵌套-eventstore">#</a></h3>
+<p><strong>文件</strong>: <code>/home/gdw/tutorial/OpenHands/openhands/events/nested_event_store.py</code></p>
+<p>用于分布式部署，通过 HTTP API 访问远程事件：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#a6e22e">@dataclass</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">NestedEventStore</span>(EventStoreABC):
+</span></span><span style="display:flex;"><span>    base_url: str
+</span></span><span style="display:flex;"><span>    sid: str
+</span></span><span style="display:flex;"><span>    user_id: str <span style="color:#f92672">|</span> <span style="color:#66d9ef">None</span>
+</span></span><span style="display:flex;"><span>    session_api_key: str <span style="color:#f92672">|</span> <span style="color:#66d9ef">None</span> <span style="color:#f92672">=</span> <span style="color:#66d9ef">None</span>
+</span></span></code></pre></div><hr>
+<h2 id="5-发布-订阅机制">5. 发布-订阅机制<a hidden class="anchor" aria-hidden="true" href="#5-发布-订阅机制">#</a></h2>
+<h3 id="51-订阅者枚举">5.1 订阅者枚举<a hidden class="anchor" aria-hidden="true" href="#51-订阅者枚举">#</a></h3>
+<p><strong>文件</strong>: <code>/home/gdw/tutorial/OpenHands/openhands/events/stream.py</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">EventStreamSubscriber</span>(str, Enum):
+</span></span><span style="display:flex;"><span>    AGENT_CONTROLLER <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;agent_controller&#39;</span>
+</span></span><span style="display:flex;"><span>    RESOLVER <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;openhands_resolver&#39;</span>
+</span></span><span style="display:flex;"><span>    SERVER <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;server&#39;</span>
+</span></span><span style="display:flex;"><span>    RUNTIME <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;runtime&#39;</span>
+</span></span><span style="display:flex;"><span>    MEMORY <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;memory&#39;</span>
+</span></span><span style="display:flex;"><span>    MAIN <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;main&#39;</span>
+</span></span><span style="display:flex;"><span>    TEST <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;test&#39;</span>
+</span></span></code></pre></div><h3 id="52-订阅">5.2 订阅<a hidden class="anchor" aria-hidden="true" href="#52-订阅">#</a></h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">subscribe</span>(
+</span></span><span style="display:flex;"><span>    self,
+</span></span><span style="display:flex;"><span>    subscriber_id: EventStreamSubscriber,
+</span></span><span style="display:flex;"><span>    callback: Callable[[Event], <span style="color:#66d9ef">None</span>],
+</span></span><span style="display:flex;"><span>    callback_id: str,
+</span></span><span style="display:flex;"><span>) <span style="color:#f92672">-&gt;</span> <span style="color:#66d9ef">None</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># 为每个回调创建独立的线程池</span>
+</span></span><span style="display:flex;"><span>    initializer <span style="color:#f92672">=</span> partial(self<span style="color:#f92672">.</span>_init_thread_loop, subscriber_id, callback_id)
+</span></span><span style="display:flex;"><span>    pool <span style="color:#f92672">=</span> ThreadPoolExecutor(max_workers<span style="color:#f92672">=</span><span style="color:#ae81ff">1</span>, initializer<span style="color:#f92672">=</span>initializer)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> subscriber_id <span style="color:#f92672">not</span> <span style="color:#f92672">in</span> self<span style="color:#f92672">.</span>_subscribers:
+</span></span><span style="display:flex;"><span>        self<span style="color:#f92672">.</span>_subscribers[subscriber_id] <span style="color:#f92672">=</span> {}
+</span></span><span style="display:flex;"><span>        self<span style="color:#f92672">.</span>_thread_pools[subscriber_id] <span style="color:#f92672">=</span> {}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> callback_id <span style="color:#f92672">in</span> self<span style="color:#f92672">.</span>_subscribers[subscriber_id]:
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">raise</span> <span style="color:#a6e22e">ValueError</span>(
+</span></span><span style="display:flex;"><span>            <span style="color:#e6db74">f</span><span style="color:#e6db74">&#39;Callback ID on subscriber </span><span style="color:#e6db74">{</span>subscriber_id<span style="color:#e6db74">}</span><span style="color:#e6db74"> already exists: </span><span style="color:#e6db74">{</span>callback_id<span style="color:#e6db74">}</span><span style="color:#e6db74">&#39;</span>
+</span></span><span style="display:flex;"><span>        )
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    self<span style="color:#f92672">.</span>_subscribers[subscriber_id][callback_id] <span style="color:#f92672">=</span> callback
+</span></span><span style="display:flex;"><span>    self<span style="color:#f92672">.</span>_thread_pools[subscriber_id][callback_id] <span style="color:#f92672">=</span> pool
+</span></span></code></pre></div><h3 id="53-队列处理循环">5.3 队列处理循环<a hidden class="anchor" aria-hidden="true" href="#53-队列处理循环">#</a></h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">_run_queue_loop</span>(self) <span style="color:#f92672">-&gt;</span> <span style="color:#66d9ef">None</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;&#34;&#34;后台队列处理线程&#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>    self<span style="color:#f92672">.</span>_queue_loop <span style="color:#f92672">=</span> asyncio<span style="color:#f92672">.</span>new_event_loop()
+</span></span><span style="display:flex;"><span>    asyncio<span style="color:#f92672">.</span>set_event_loop(self<span style="color:#f92672">.</span>_queue_loop)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">try</span>:
+</span></span><span style="display:flex;"><span>        self<span style="color:#f92672">.</span>_queue_loop<span style="color:#f92672">.</span>run_until_complete(self<span style="color:#f92672">.</span>_process_queue())
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">finally</span>:
+</span></span><span style="display:flex;"><span>        self<span style="color:#f92672">.</span>_queue_loop<span style="color:#f92672">.</span>close()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">async</span> <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">_process_queue</span>(self) <span style="color:#f92672">-&gt;</span> <span style="color:#66d9ef">None</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">while</span> should_continue() <span style="color:#f92672">and</span> <span style="color:#f92672">not</span> self<span style="color:#f92672">.</span>_stop_flag<span style="color:#f92672">.</span>is_set():
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">try</span>:
+</span></span><span style="display:flex;"><span>            event <span style="color:#f92672">=</span> self<span style="color:#f92672">.</span>_queue<span style="color:#f92672">.</span>get(timeout<span style="color:#f92672">=</span><span style="color:#ae81ff">0.1</span>)
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">except</span> queue<span style="color:#f92672">.</span>Empty:
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">continue</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e"># 分发给所有订阅者</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">for</span> key <span style="color:#f92672">in</span> sorted(self<span style="color:#f92672">.</span>_subscribers<span style="color:#f92672">.</span>keys()):
+</span></span><span style="display:flex;"><span>            callbacks <span style="color:#f92672">=</span> self<span style="color:#f92672">.</span>_subscribers[key]
+</span></span><span style="display:flex;"><span>            callback_ids <span style="color:#f92672">=</span> list(callbacks<span style="color:#f92672">.</span>keys())
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">for</span> callback_id <span style="color:#f92672">in</span> callback_ids:
+</span></span><span style="display:flex;"><span>                <span style="color:#66d9ef">if</span> callback_id <span style="color:#f92672">in</span> callbacks:
+</span></span><span style="display:flex;"><span>                    callback <span style="color:#f92672">=</span> callbacks[callback_id]
+</span></span><span style="display:flex;"><span>                    pool <span style="color:#f92672">=</span> self<span style="color:#f92672">.</span>_thread_pools[key][callback_id]
+</span></span><span style="display:flex;"><span>                    future <span style="color:#f92672">=</span> pool<span style="color:#f92672">.</span>submit(callback, event)
+</span></span><span style="display:flex;"><span>                    future<span style="color:#f92672">.</span>add_done_callback(
+</span></span><span style="display:flex;"><span>                        self<span style="color:#f92672">.</span>_make_error_handler(callback_id, key)
+</span></span><span style="display:flex;"><span>                    )
+</span></span></code></pre></div><h3 id="54-异步分发架构">5.4 异步分发架构<a hidden class="anchor" aria-hidden="true" href="#54-异步分发架构">#</a></h3>
+<pre tabindex="0"><code>事件添加 (add_event)
+    │
+    ├── 同步部分
+    │   ├── ID 分配
+    │   ├── 序列化
+    │   ├── 秘密替换
+    │   └── 文件持久化
+    │
+    └── 异步部分 (_queue.put)
+            │
+            ▼
+    ┌───────────────────────┐
+    │   队列处理线程         │
+    │  _process_queue()     │
+    └───────────────────────┘
+            │
+            ├──► AGENT_CONTROLLER (线程池 1)
+            ├──► RUNTIME (线程池 2)
+            ├──► SERVER (线程池 3)
+            └──► ...
+</code></pre><hr>
+<h2 id="6-事件流转">6. 事件流转<a hidden class="anchor" aria-hidden="true" href="#6-事件流转">#</a></h2>
+<h3 id="61-完整事件流">6.1 完整事件流<a hidden class="anchor" aria-hidden="true" href="#61-完整事件流">#</a></h3>
+<pre tabindex="0"><code>用户/智能体
+    │
+    ▼
+EventStream.add_event(action, source)
+    │
+    ├──► 文件存储 (同步)
+    │
+    └──► 队列
+            │
+            ▼
+    ┌───────────────────────┐
+    │  _process_queue()     │
+    └───────────────────────┘
+            │
+    ┌───────┼───────┬───────┐
+    ▼       ▼       ▼       ▼
+ ┌────┐  ┌────┐  ┌────┐  ┌────┐
+ │Ctrl│  │ Rt │  │Svc │  │ Mem│
+ └──┬─┘  └──┬─┘  └──┬─┘  └──┬─┘
+    │        │       │       │
+    │        │       │       │
+    ▼        ▼       ▼       ▼
+ 处理事件   执行    推送    更新
+           动作    WebSocket 记忆
+    │        │       │       │
+    └────────┼───────┴───────┘
+             │
+             ▼
+    EventStream.add_event(observation)
+             │
+             ▼
+         循环处理
+</code></pre><h3 id="62-runtime-事件处理">6.2 Runtime 事件处理<a hidden class="anchor" aria-hidden="true" href="#62-runtime-事件处理">#</a></h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">on_event</span>(self, event: Event) <span style="color:#f92672">-&gt;</span> <span style="color:#66d9ef">None</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;&#34;&#34;Runtime 订阅 Action 事件&#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> isinstance(event, Action):
+</span></span><span style="display:flex;"><span>        asyncio<span style="color:#f92672">.</span>get_event_loop()<span style="color:#f92672">.</span>run_until_complete(
+</span></span><span style="display:flex;"><span>            self<span style="color:#f92672">.</span>_handle_action(event)
+</span></span><span style="display:flex;"><span>        )
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">async</span> <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">_handle_action</span>(self, event: Action) <span style="color:#f92672">-&gt;</span> <span style="color:#66d9ef">None</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">try</span>:
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> isinstance(event, MCPAction):
+</span></span><span style="display:flex;"><span>            observation <span style="color:#f92672">=</span> <span style="color:#66d9ef">await</span> self<span style="color:#f92672">.</span>call_tool_mcp(event)
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">else</span>:
+</span></span><span style="display:flex;"><span>            observation <span style="color:#f92672">=</span> <span style="color:#66d9ef">await</span> call_sync_from_async(self<span style="color:#f92672">.</span>run_action, event)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">except</span> <span style="color:#a6e22e">Exception</span> <span style="color:#66d9ef">as</span> e:
+</span></span><span style="display:flex;"><span>        observation <span style="color:#f92672">=</span> ErrorObservation(content<span style="color:#f92672">=</span>str(e))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    observation<span style="color:#f92672">.</span>_cause <span style="color:#f92672">=</span> event<span style="color:#f92672">.</span>id
+</span></span><span style="display:flex;"><span>    observation<span style="color:#f92672">.</span>tool_call_metadata <span style="color:#f92672">=</span> event<span style="color:#f92672">.</span>tool_call_metadata
+</span></span><span style="display:flex;"><span>    self<span style="color:#f92672">.</span>event_stream<span style="color:#f92672">.</span>add_event(observation, source)
+</span></span></code></pre></div><h3 id="63-agentcontroller-事件处理">6.3 AgentController 事件处理<a hidden class="anchor" aria-hidden="true" href="#63-agentcontroller-事件处理">#</a></h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">on_event</span>(self, event: Event) <span style="color:#f92672">-&gt;</span> <span style="color:#66d9ef">None</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;&#34;&#34;Controller 订阅所有事件&#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> self<span style="color:#f92672">.</span>delegate <span style="color:#f92672">is</span> <span style="color:#f92672">not</span> <span style="color:#66d9ef">None</span>:
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e"># 转发给委托</span>
+</span></span><span style="display:flex;"><span>        asyncio<span style="color:#f92672">.</span>get_event_loop()<span style="color:#f92672">.</span>run_until_complete(
+</span></span><span style="display:flex;"><span>            self<span style="color:#f92672">.</span>delegate<span style="color:#f92672">.</span>_on_event(event)
+</span></span><span style="display:flex;"><span>        )
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span>
+</span></span><span style="display:flex;"><span>    asyncio<span style="color:#f92672">.</span>get_event_loop()<span style="color:#f92672">.</span>run_until_complete(self<span style="color:#f92672">.</span>_on_event(event))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">async</span> <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">_on_event</span>(self, event: Event) <span style="color:#f92672">-&gt;</span> <span style="color:#66d9ef">None</span>:
+</span></span><span style="display:flex;"><span>    self<span style="color:#f92672">.</span>state_tracker<span style="color:#f92672">.</span>add_history(event)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> isinstance(event, Action):
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">await</span> self<span style="color:#f92672">.</span>_handle_action(event)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">elif</span> isinstance(event, Observation):
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">await</span> self<span style="color:#f92672">.</span>_handle_observation(event)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> self<span style="color:#f92672">.</span>should_step(event):
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">await</span> self<span style="color:#f92672">.</span>_step_with_exception_handling()
+</span></span></code></pre></div><hr>
+<h2 id="7-事件序列化">7. 事件序列化<a hidden class="anchor" aria-hidden="true" href="#7-事件序列化">#</a></h2>
+<h3 id="71-event-to-dict">7.1 Event to Dict<a hidden class="anchor" aria-hidden="true" href="#71-event-to-dict">#</a></h3>
+<p><strong>文件</strong>: <code>/home/gdw/tutorial/OpenHands/openhands/events/serialization/event.py</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">event_to_dict</span>(event: <span style="color:#e6db74">&#39;Event&#39;</span>) <span style="color:#f92672">-&gt;</span> dict:
+</span></span><span style="display:flex;"><span>    props <span style="color:#f92672">=</span> asdict(event)
+</span></span><span style="display:flex;"><span>    d <span style="color:#f92672">=</span> {}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">for</span> key <span style="color:#f92672">in</span> TOP_KEYS:
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> hasattr(event, key) <span style="color:#f92672">and</span> getattr(event, key) <span style="color:#f92672">is</span> <span style="color:#f92672">not</span> <span style="color:#66d9ef">None</span>:
+</span></span><span style="display:flex;"><span>            d[key] <span style="color:#f92672">=</span> getattr(event, key)
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">elif</span> hasattr(event, <span style="color:#e6db74">f</span><span style="color:#e6db74">&#39;_</span><span style="color:#e6db74">{</span>key<span style="color:#e6db74">}</span><span style="color:#e6db74">&#39;</span>) <span style="color:#f92672">and</span> getattr(event, <span style="color:#e6db74">f</span><span style="color:#e6db74">&#39;_</span><span style="color:#e6db74">{</span>key<span style="color:#e6db74">}</span><span style="color:#e6db74">&#39;</span>) <span style="color:#f92672">is</span> <span style="color:#f92672">not</span> <span style="color:#66d9ef">None</span>:
+</span></span><span style="display:flex;"><span>            d[key] <span style="color:#f92672">=</span> getattr(event, <span style="color:#e6db74">f</span><span style="color:#e6db74">&#39;_</span><span style="color:#e6db74">{</span>key<span style="color:#e6db74">}</span><span style="color:#e6db74">&#39;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> <span style="color:#e6db74">&#39;action&#39;</span> <span style="color:#f92672">in</span> d:
+</span></span><span style="display:flex;"><span>        d[<span style="color:#e6db74">&#39;args&#39;</span>] <span style="color:#f92672">=</span> props
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> event<span style="color:#f92672">.</span>timeout <span style="color:#f92672">is</span> <span style="color:#f92672">not</span> <span style="color:#66d9ef">None</span>:
+</span></span><span style="display:flex;"><span>            d[<span style="color:#e6db74">&#39;timeout&#39;</span>] <span style="color:#f92672">=</span> event<span style="color:#f92672">.</span>timeout
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">elif</span> <span style="color:#e6db74">&#39;observation&#39;</span> <span style="color:#f92672">in</span> d:
+</span></span><span style="display:flex;"><span>        d[<span style="color:#e6db74">&#39;content&#39;</span>] <span style="color:#f92672">=</span> props<span style="color:#f92672">.</span>pop(<span style="color:#e6db74">&#39;content&#39;</span>, <span style="color:#e6db74">&#39;&#39;</span>)
+</span></span><span style="display:flex;"><span>        d[<span style="color:#e6db74">&#39;extras&#39;</span>] <span style="color:#f92672">=</span> {<span style="color:#f92672">...</span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> d
+</span></span></code></pre></div><h3 id="72-dict-to-event">7.2 Dict to Event<a hidden class="anchor" aria-hidden="true" href="#72-dict-to-event">#</a></h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">event_from_dict</span>(data: dict[str, Any]) <span style="color:#f92672">-&gt;</span> <span style="color:#e6db74">&#39;Event&#39;</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> <span style="color:#e6db74">&#39;action&#39;</span> <span style="color:#f92672">in</span> data:
+</span></span><span style="display:flex;"><span>        evt <span style="color:#f92672">=</span> action_from_dict(data)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">elif</span> <span style="color:#e6db74">&#39;observation&#39;</span> <span style="color:#f92672">in</span> data:
+</span></span><span style="display:flex;"><span>        evt <span style="color:#f92672">=</span> observation_from_dict(data)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">else</span>:
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">raise</span> <span style="color:#a6e22e">ValueError</span>(<span style="color:#e6db74">f</span><span style="color:#e6db74">&#39;Unknown event type: </span><span style="color:#e6db74">{</span>data<span style="color:#e6db74">}</span><span style="color:#e6db74">&#39;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># 设置私有属性</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">for</span> key <span style="color:#f92672">in</span> UNDERSCORE_KEYS:
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> key <span style="color:#f92672">in</span> data:
+</span></span><span style="display:flex;"><span>            setattr(evt, <span style="color:#e6db74">&#39;_&#39;</span> <span style="color:#f92672">+</span> key, data[key])
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> evt
+</span></span></code></pre></div><h3 id="73-action-序列化">7.3 Action 序列化<a hidden class="anchor" aria-hidden="true" href="#73-action-序列化">#</a></h3>
+<p><strong>文件</strong>: <code>/home/gdw/tutorial/OpenHands/openhands/events/serialization/action.py</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>ACTION_TYPE_TO_CLASS <span style="color:#f92672">=</span> {
+</span></span><span style="display:flex;"><span>    action_class<span style="color:#f92672">.</span>action: action_class
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">for</span> action_class <span style="color:#f92672">in</span> actions
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">action_from_dict</span>(action: dict) <span style="color:#f92672">-&gt;</span> Action:
+</span></span><span style="display:flex;"><span>    action_class <span style="color:#f92672">=</span> ACTION_TYPE_TO_CLASS<span style="color:#f92672">.</span>get(action[<span style="color:#e6db74">&#39;action&#39;</span>])
+</span></span><span style="display:flex;"><span>    args <span style="color:#f92672">=</span> action<span style="color:#f92672">.</span>get(<span style="color:#e6db74">&#39;args&#39;</span>, {})
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    decoded_action <span style="color:#f92672">=</span> action_class(<span style="color:#f92672">**</span>args)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> <span style="color:#e6db74">&#39;timeout&#39;</span> <span style="color:#f92672">in</span> action:
+</span></span><span style="display:flex;"><span>        blocking <span style="color:#f92672">=</span> args<span style="color:#f92672">.</span>get(<span style="color:#e6db74">&#39;blocking&#39;</span>, <span style="color:#66d9ef">False</span>)
+</span></span><span style="display:flex;"><span>        decoded_action<span style="color:#f92672">.</span>set_hard_timeout(action[<span style="color:#e6db74">&#39;timeout&#39;</span>], blocking<span style="color:#f92672">=</span>blocking)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> decoded_action
+</span></span></code></pre></div><h3 id="74-observation-序列化">7.4 Observation 序列化<a hidden class="anchor" aria-hidden="true" href="#74-observation-序列化">#</a></h3>
+<p><strong>文件</strong>: <code>/home/gdw/tutorial/OpenHands/openhands/events/serialization/observation.py</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>OBSERVATION_TYPE_TO_CLASS <span style="color:#f92672">=</span> {
+</span></span><span style="display:flex;"><span>    observation_class<span style="color:#f92672">.</span>observation: observation_class
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">for</span> observation_class <span style="color:#f92672">in</span> observations
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">observation_from_dict</span>(observation: dict) <span style="color:#f92672">-&gt;</span> Observation:
+</span></span><span style="display:flex;"><span>    observation_class <span style="color:#f92672">=</span> OBSERVATION_TYPE_TO_CLASS<span style="color:#f92672">.</span>get(observation[<span style="color:#e6db74">&#39;observation&#39;</span>])
+</span></span><span style="display:flex;"><span>    content <span style="color:#f92672">=</span> observation<span style="color:#f92672">.</span>pop(<span style="color:#e6db74">&#39;content&#39;</span>, <span style="color:#e6db74">&#39;&#39;</span>)
+</span></span><span style="display:flex;"><span>    extras <span style="color:#f92672">=</span> copy<span style="color:#f92672">.</span>deepcopy(observation<span style="color:#f92672">.</span>pop(<span style="color:#e6db74">&#39;extras&#39;</span>, {}))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    obs <span style="color:#f92672">=</span> observation_class(content<span style="color:#f92672">=</span>content, <span style="color:#f92672">**</span>extras)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> obs
+</span></span></code></pre></div><hr>
+<h2 id="8-设计模式">8. 设计模式<a hidden class="anchor" aria-hidden="true" href="#8-设计模式">#</a></h2>
+<h3 id="81-观察者模式-observer-pattern">8.1 观察者模式 (Observer Pattern)<a hidden class="anchor" aria-hidden="true" href="#81-观察者模式-observer-pattern">#</a></h3>
+<p>EventStream 实现多订阅者观察者模式：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">EventStream</span>(EventStore):
+</span></span><span style="display:flex;"><span>    _subscribers: dict[str, dict[str, Callable]]
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">subscribe</span>(self, subscriber_id, callback, callback_id):
+</span></span><span style="display:flex;"><span>        self<span style="color:#f92672">.</span>_subscribers[subscriber_id][callback_id] <span style="color:#f92672">=</span> callback
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">add_event</span>(self, event, source):
+</span></span><span style="display:flex;"><span>        self<span style="color:#f92672">.</span>_queue<span style="color:#f92672">.</span>put(event)  <span style="color:#75715e"># 异步通知所有订阅者</span>
+</span></span></code></pre></div><p><strong>优势</strong>：</p>
+<ul>
+<li>解耦通信</li>
+<li>多订阅者独立响应</li>
+<li>动态订阅/取消</li>
+</ul>
+<h3 id="82-消息队列模式">8.2 消息队列模式<a hidden class="anchor" aria-hidden="true" href="#82-消息队列模式">#</a></h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>_queue: queue<span style="color:#f92672">.</span>Queue[Event]  <span style="color:#75715e"># 内部队列</span>
+</span></span><span style="display:flex;"><span>_queue_thread: threading<span style="color:#f92672">.</span>Thread  <span style="color:#75715e"># 后台线程处理</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">add_event</span>(self, event, source):
+</span></span><span style="display:flex;"><span>    self<span style="color:#f92672">.</span>_queue<span style="color:#f92672">.</span>put(event)  <span style="color:#75715e"># 非阻塞入队</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">async</span> <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">_process_queue</span>(self):
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">while</span> should_continue():
+</span></span><span style="display:flex;"><span>        event <span style="color:#f92672">=</span> self<span style="color:#f92672">.</span>_queue<span style="color:#f92672">.</span>get(timeout<span style="color:#f92672">=</span><span style="color:#ae81ff">0.1</span>)  <span style="color:#75715e"># 阻塞出队</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">for</span> subscriber <span style="color:#f92672">in</span> self<span style="color:#f92672">.</span>_subscribers:
+</span></span><span style="display:flex;"><span>            pool<span style="color:#f92672">.</span>submit(subscriber<span style="color:#f92672">.</span>callback, event)
+</span></span></code></pre></div><p><strong>优势</strong>：</p>
+<ul>
+<li>生产者/消费者解耦</li>
+<li>防止慢消费者阻塞</li>
+<li>提供背压处理</li>
+</ul>
+<h3 id="83-代理缓存模式">8.3 代理/缓存模式<a hidden class="anchor" aria-hidden="true" href="#83-代理缓存模式">#</a></h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>_write_page_cache: list[dict]  <span style="color:#75715e"># 写缓存</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">add_event</span>(self, event, source):
+</span></span><span style="display:flex;"><span>    current_write_page<span style="color:#f92672">.</span>append(data)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> len(current_write_page) <span style="color:#f92672">==</span> self<span style="color:#f92672">.</span>cache_size:
+</span></span><span style="display:flex;"><span>        self<span style="color:#f92672">.</span>_store_cache_page(current_write_page)  <span style="color:#75715e"># 批量持久化</span>
+</span></span></code></pre></div><p><strong>优势</strong>：</p>
+<ul>
+<li>减少文件 I/O</li>
+<li>缓存页加速读取</li>
+</ul>
+<h3 id="84-策略模式-strategy-pattern">8.4 策略模式 (Strategy Pattern)<a hidden class="anchor" aria-hidden="true" href="#84-策略模式-strategy-pattern">#</a></h3>
+<p>多 EventStore 实现共享接口：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">EventStoreABC</span>:  <span style="color:#75715e"># 抽象基类</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">@abstractmethod</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">search_events</span>(<span style="color:#f92672">...</span>): <span style="color:#f92672">...</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">EventStore</span>(EventStoreABC):  <span style="color:#75715e"># 文件存储</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">...</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">NestedEventStore</span>(EventStoreABC):  <span style="color:#75715e"># HTTP 存储</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">...</span>
+</span></span></code></pre></div><p><strong>优势</strong>：</p>
+<ul>
+<li>可替换存储后端</li>
+<li>支持分布式部署</li>
+</ul>
+<hr>
+<h2 id="9-架构流程图">9. 架构流程图<a hidden class="anchor" aria-hidden="true" href="#9-架构流程图">#</a></h2>
+<h3 id="91-事件流全景图">9.1 事件流全景图<a hidden class="anchor" aria-hidden="true" href="#91-事件流全景图">#</a></h3>
+<pre tabindex="0"><code>┌─────────────────────────────────────────────────────────────────────┐
+│                              用户/Agent                             │
+└─────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                       EventStream.add_event()                       │
+│                                                                      │
+│  1. 验证事件 (无 ID)                                                 │
+│  2. 分配 ID 和时间戳                                                  │
+│  3. 序列化为 JSON                                                    │
+│  4. 替换敏感信息                                                     │
+│  5. 写入文件存储                                                     │
+│  6. 加入队列                                                         │
+└─────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                      队列处理线程 (_queue_thread)                    │
+│                                                                      │
+│  _process_queue()                                                    │
+│    └── while not stop:                                               │
+│        event = queue.get(timeout=0.1)                                │
+│        for subscriber in sorted(subscribers):                        │
+│            pool.submit(callback, event)                             │
+└─────────────────────────────────────────────────────────────────────┘
+                                    │
+          ┌─────────────────────────┼─────────────────────────┐
+          ▼                         ▼                         ▼
+┌─────────────────┐       ┌─────────────────┐       ┌─────────────────┐
+│ AGENT_CONTROLLER│       │     RUNTIME     │       │     SERVER      │
+│                 │       │                 │       │                 │
+│ on_event()      │       │ on_event()      │       │ on_event()      │
+│                 │       │                 │       │                 │
+│ - _handle_action│       │ - _handle_action│       │ - WebSocket     │
+│ - _handle_obs   │       │ - 执行动作      │       │   推送          │
+│ - _step()       │       │ - 返回观察      │       │                 │
+└─────────────────┘       └─────────────────┘       └─────────────────┘
+          │                         │                         │
+          ▼                         ▼                         ▼
+┌─────────────────┐       ┌─────────────────┐       ┌─────────────────┐
+│  Agent (LLM)    │       │ Observations    │       │ Client (UI)     │
+│                 │       │                 │       │                 │
+│ 决策下一步动作  │       │ 添加到事件流    │       │ 接收事件更新   │
+└─────────────────┘       └─────────────────┘       └─────────────────┘
+</code></pre><h3 id="92-订阅者架构">9.2 订阅者架构<a hidden class="anchor" aria-hidden="true" href="#92-订阅者架构">#</a></h3>
+<pre tabindex="0"><code>                    EventStream
+                   ┌──────────────────────────────────────┐
+                   │  _subscribers: dict                  │
+                   │  ┌────────────────────────────────┐  │
+                   │  │ &#39;agent_controller&#39; → {          │  │
+                   │  │    &#39;ctrl-1&#39;: callback1          │  │
+                   │  │  }                              │  │
+                   │  │ &#39;runtime&#39; → {                   │  │
+                   │  │    &#39;rt-1&#39;: callback2             │  │
+                   │  │  }                              │  │
+                   │  │ &#39;server&#39; → {                    │  │
+                   │  │    &#39;ws-1&#39;: callback3            │  │
+                   │  │  }                              │  │
+                   │  └────────────────────────────────┘  │
+                   └──────────────────────────────────────┘
+                                    │
+        ┌───────────────────────────┼───────────────────────────┐
+        │                           │                           │
+        ▼                           ▼                           ▼
+  ┌──────────────┐           ┌──────────────┐           ┌──────────────┐
+  │ Controller   │           │   Runtime    │           │   Server     │
+  │              │           │              │           │              │
+  │ ThreadPool   │           │ ThreadPool   │           │ ThreadPool   │
+  │ + callback1  │           │ + callback2  │           │ + callback3  │
+  │              │           │              │           │              │
+  │ event_loop   │           │ event_loop   │           │ event_loop   │
+  └──────────────┘           └──────────────┘           └──────────────┘
+</code></pre><h3 id="93-写缓存流程">9.3 写缓存流程<a hidden class="anchor" aria-hidden="true" href="#93-写缓存流程">#</a></h3>
+<pre tabindex="0"><code>add_event() 调用
+    │
+    ▼
+┌─────────────────────────────────────────┐
+│  1. _write_page_cache.append(event)    │
+│                                         │
+│  2. len(cache) == cache_size (25)?     │
+│     YES → _store_cache_page()           │
+│           + 创建新缓存页                │
+│     NO  → 继续累积                      │
+└─────────────────────────────────────────┘
+    │
+    ▼
+_store_cache_page()
+    │
+    ├── 将缓存页写入单个文件
+    │   └── sessions/{sid}/event_cache/0-25.json
+    │
+    └── 清空缓存页
+</code></pre><hr>
+<h2 id="10-面试问题">10. 面试问题<a hidden class="anchor" aria-hidden="true" href="#10-面试问题">#</a></h2>
+<h3 id="q1-eventstream-在-openhands-中扮演什么角色">Q1: EventStream 在 OpenHands 中扮演什么角色？<a hidden class="anchor" aria-hidden="true" href="#q1-eventstream-在-openhands-中扮演什么角色">#</a></h3>
+<p><strong>参考答案</strong>：</p>
+<blockquote>
+<p>EventStream 是 OpenHands 的<strong>中央消息总线</strong>，采用发布-订阅模式连接所有组件。</p>
+<p><strong>核心角色</strong>：</p>
+<ol>
+<li><strong>解耦器</strong>：Agent、Runtime、Server 等不直接通信，都通过 EventStream</li>
+<li><strong>事件分发</strong>：将事件异步分发给所有订阅者</li>
+<li><strong>持久化</strong>：自动保存事件到文件存储</li>
+<li><strong>秘密管理</strong>：在存储前替换敏感信息</li>
+</ol>
+<p><strong>订阅者</strong>：</p>
+<ul>
+<li>AGENT_CONTROLLER：接收所有事件，驱动主循环</li>
+<li>RUNTIME：接收 Action，执行并返回 Observation</li>
+<li>SERVER：推送事件到 WebSocket 客户端</li>
+</ul>
+</blockquote>
+<hr>
+<h3 id="q2-事件驱动架构相比直接调用有什么优势">Q2: 事件驱动架构相比直接调用有什么优势？<a hidden class="anchor" aria-hidden="true" href="#q2-事件驱动架构相比直接调用有什么优势">#</a></h3>
+<p><strong>参考答案</strong>：</p>
+<blockquote>
+<table>
+  <thead>
+      <tr>
+          <th>优势</th>
+          <th>说明</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><strong>松耦合</strong></td>
+          <td>组件不直接依赖，通过事件通信</td>
+      </tr>
+      <tr>
+          <td><strong>时间解耦</strong></td>
+          <td>生产者和消费者异步操作</td>
+      </tr>
+      <tr>
+          <td><strong>可观察</strong></td>
+          <td>所有事件被记录，便于调试</td>
+      </tr>
+      <tr>
+          <td><strong>可扩展</strong></td>
+          <td>新组件只需订阅事件</td>
+      </tr>
+      <tr>
+          <td><strong>可重放</strong></td>
+          <td>事件历史支持回放和恢复</td>
+      </tr>
+  </tbody>
+</table>
+<p><strong>对比直接调用</strong>：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#75715e"># 直接调用（紧耦合）</span>
+</span></span><span style="display:flex;"><span>runtime<span style="color:#f92672">.</span>execute(action)
+</span></span><span style="display:flex;"><span>observation <span style="color:#f92672">=</span> result
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 事件驱动（松耦合）</span>
+</span></span><span style="display:flex;"><span>event_stream<span style="color:#f92672">.</span>add_event(action)  <span style="color:#75715e"># 发布</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Runtime 订阅并处理</span>
+</span></span><span style="display:flex;"><span>event_stream<span style="color:#f92672">.</span>add_event(observation)  <span style="color:#75715e"># 发布结果</span>
+</span></span></code></pre></div></blockquote>
+<hr>
+<h3 id="q3-eventstream-的异步分发是如何实现的">Q3: EventStream 的异步分发是如何实现的？<a hidden class="anchor" aria-hidden="true" href="#q3-eventstream-的异步分发是如何实现的">#</a></h3>
+<p><strong>参考答案</strong>：</p>
+<blockquote>
+<p><strong>三层异步机制</strong>：</p>
+<ol>
+<li><strong>队列缓冲</strong></li>
+</ol>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>_queue: queue<span style="color:#f92672">.</span>Queue[Event]  <span style="color:#75715e"># 线程安全的队列</span>
+</span></span></code></pre></div><ol start="2">
+<li><strong>后台线程</strong></li>
+</ol>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>_queue_thread <span style="color:#f92672">=</span> threading<span style="color:#f92672">.</span>Thread(target<span style="color:#f92672">=</span>self<span style="color:#f92672">.</span>_run_queue_loop)
+</span></span><span style="display:flex;"><span>_queue_thread<span style="color:#f92672">.</span>start()
+</span></span></code></pre></div><ol start="3">
+<li><strong>线程池分发</strong></li>
+</ol>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">async</span> <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">_process_queue</span>(self):
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">while</span> <span style="color:#f92672">not</span> stop:
+</span></span><span style="display:flex;"><span>        event <span style="color:#f92672">=</span> self<span style="color:#f92672">.</span>_queue<span style="color:#f92672">.</span>get(timeout<span style="color:#f92672">=</span><span style="color:#ae81ff">0.1</span>)
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">for</span> key <span style="color:#f92672">in</span> subscribers:
+</span></span><span style="display:flex;"><span>            pool<span style="color:#f92672">.</span>submit(callback, event)
+</span></span></code></pre></div><p><strong>优势</strong>：</p>
+<ul>
+<li>add_event() 不会阻塞等待处理</li>
+<li>慢订阅者不会阻塞快订阅者</li>
+<li>自动背压（队列满时阻塞生产者）</li>
+</ul>
+</blockquote>
+<hr>
+<h3 id="q4-事件是如何持久化的">Q4: 事件是如何持久化的？<a hidden class="anchor" aria-hidden="true" href="#q4-事件是如何持久化的">#</a></h3>
+<p><strong>参考答案</strong>：</p>
+<blockquote>
+<p><strong>存储结构</strong>：</p>
+<pre tabindex="0"><code>sessions/{sid}/
+├── events/
+│   ├── 0.json   # 单个事件
+│   ├── 1.json
+│   └── ...
+└── event_cache/
+    └── 0-25.json  # 缓存页 (25 个事件)
+</code></pre><p><strong>写优化</strong>：</p>
+<ul>
+<li>使用 <code>_write_page_cache</code> 批量写入</li>
+<li>默认 25 个事件写入一次</li>
+<li>缓存页减少文件数量</li>
+</ul>
+<p><strong>读取优化</strong>：</p>
+<ul>
+<li>优先从缓存页读取</li>
+<li>批量加载减少 I/O</li>
+</ul>
+</blockquote>
+<hr>
+<h3 id="q5-订阅者是如何管理的">Q5: 订阅者是如何管理的？<a hidden class="anchor" aria-hidden="true" href="#q5-订阅者是如何管理的">#</a></h3>
+<p><strong>参考答案</strong>：</p>
+<blockquote>
+<p><strong>数据结构</strong>：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>_subscribers: dict[str, dict[str, Callable]]
+</span></span><span style="display:flex;"><span><span style="color:#75715e">#            subscriber_id → callback_id → callback</span>
+</span></span></code></pre></div><p><strong>订阅过程</strong>：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">subscribe</span>(subscriber_id, callback, callback_id):
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># 1. 创建独立线程池</span>
+</span></span><span style="display:flex;"><span>    pool <span style="color:#f92672">=</span> ThreadPoolExecutor(max_workers<span style="color:#f92672">=</span><span style="color:#ae81ff">1</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># 2. 注册回调</span>
+</span></span><span style="display:flex;"><span>    self<span style="color:#f92672">.</span>_subscribers[subscriber_id][callback_id] <span style="color:#f92672">=</span> callback
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># 3. 关联线程池</span>
+</span></span><span style="display:flex;"><span>    self<span style="color:#f92672">.</span>_thread_pools[subscriber_id][callback_id] <span style="color:#f92672">=</span> pool
+</span></span></code></pre></div><p><strong>特点</strong>：</p>
+<ul>
+<li>每个 subscriber 可有多个 callback</li>
+<li>每个 callback 有独立线程池</li>
+<li>支持动态订阅/取消</li>
+</ul>
+</blockquote>
+<hr>
+<h3 id="q6-什么是-action-和-observation它们的关系是什么">Q6: 什么是 Action 和 Observation？它们的关系是什么？<a hidden class="anchor" aria-hidden="true" href="#q6-什么是-action-和-observation它们的关系是什么">#</a></h3>
+<p><strong>参考答案</strong>：</p>
+<blockquote>
+<p><strong>Action</strong>：智能体发出的<strong>动作请求</strong></p>
+<ul>
+<li>如 CmdRunAction（执行命令）、FileReadAction（读文件）</li>
+<li><code>runnable=True</code> 表示可被执行</li>
+</ul>
+<p><strong>Observation</strong>：执行结果的<strong>观察反馈</strong></p>
+<ul>
+<li>如 CmdOutputObservation（命令输出）</li>
+<li>包含执行结果内容</li>
+</ul>
+<p><strong>关系</strong>：</p>
+<pre tabindex="0"><code>Action (请求)
+   │
+   │ EventStream 路由
+   ▼
+Runtime 执行
+   │
+   ▼
+Observation (结果)
+   │
+   │ EventStream 路由
+   ▼
+AgentController 处理
+   │
+   ▼
+决定下一步
+</code></pre></blockquote>
+<hr>
+<h3 id="q7-eventstream-如何处理敏感信息">Q7: EventStream 如何处理敏感信息？<a hidden class="anchor" aria-hidden="true" href="#q7-eventstream-如何处理敏感信息">#</a></h3>
+<p><strong>参考答案</strong>：</p>
+<blockquote>
+<p><strong>秘密替换机制</strong>：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">add_event</span>(self, event: Event, source: EventSource) <span style="color:#f92672">-&gt;</span> <span style="color:#66d9ef">None</span>:
+</span></span><span style="display:flex;"><span>    data <span style="color:#f92672">=</span> event_to_dict(event)
+</span></span><span style="display:flex;"><span>    data <span style="color:#f92672">=</span> self<span style="color:#f92672">.</span>_replace_secrets(data)  <span style="color:#75715e"># 替换敏感信息</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># 存储替换后的数据</span>
+</span></span></code></pre></div><p><strong>替换内容</strong>：</p>
+<ul>
+<li>API 密钥</li>
+<li>密码</li>
+<li>Token</li>
+</ul>
+<p><strong>替换后</strong>：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>secrets: dict[str, str] <span style="color:#f92672">=</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#39;api_key_xxx&#39;</span>: <span style="color:#e6db74">&#39;[REDACTED]&#39;</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p><strong>好处</strong>：</p>
+<ul>
+<li>事件历史中不存储明文密钥</li>
+<li>调试时可恢复（需要权限）</li>
+</ul>
+</blockquote>
+<hr>
+<h3 id="q8-如何扩展新的事件类型">Q8: 如何扩展新的事件类型？<a hidden class="anchor" aria-hidden="true" href="#q8-如何扩展新的事件类型">#</a></h3>
+<p><strong>参考答案</strong>：</p>
+<blockquote>
+<p><strong>步骤</strong>：</p>
+<ol>
+<li><strong>定义事件类</strong></li>
+</ol>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#a6e22e">@dataclass</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">MyCustomAction</span>(Action):
+</span></span><span style="display:flex;"><span>    action: str <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;custom_action&#39;</span>
+</span></span><span style="display:flex;"><span>    runnable: ClassVar[bool] <span style="color:#f92672">=</span> <span style="color:#66d9ef">True</span>
+</span></span><span style="display:flex;"><span>    custom_field: str <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;&#39;</span>
+</span></span></code></pre></div><ol start="2">
+<li><strong>注册到序列化</strong></li>
+</ol>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#75715e"># events/serialization/action.py</span>
+</span></span><span style="display:flex;"><span>ACTION_TYPE_TO_CLASS[<span style="color:#e6db74">&#39;custom_action&#39;</span>] <span style="color:#f92672">=</span> MyCustomAction
+</span></span></code></pre></div><ol start="3">
+<li><strong>添加处理逻辑</strong></li>
+</ol>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#75715e"># Runtime 或 Controller</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">async</span> <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">_handle_action</span>(self, event: Action):
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> isinstance(event, MyCustomAction):
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">await</span> self<span style="color:#f92672">.</span>_handle_custom_action(event)
+</span></span></code></pre></div></blockquote>
+<hr>
+<h3 id="q9-什么是循环检测eventstream-如何防止">Q9: 什么是循环检测？EventStream 如何防止？<a hidden class="anchor" aria-hidden="true" href="#q9-什么是循环检测eventstream-如何防止">#</a></h3>
+<p><strong>参考答案</strong>：</p>
+<blockquote>
+<p><strong>循环问题</strong>：</p>
+<ul>
+<li>组件处理事件后重新发布同一事件</li>
+<li>导致无限循环</li>
+</ul>
+<p><strong>EventStream 防护</strong>：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">add_event</span>(self, event: Event, source: EventSource) <span style="color:#f92672">-&gt;</span> <span style="color:#66d9ef">None</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> event<span style="color:#f92672">.</span>id <span style="color:#f92672">!=</span> Event<span style="color:#f92672">.</span>INVALID_ID:
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">raise</span> <span style="color:#a6e22e">ValueError</span>(
+</span></span><span style="display:flex;"><span>            <span style="color:#e6db74">f</span><span style="color:#e6db74">&#39;Event already has an ID. &#39;</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#e6db74">&#39;It was probably added back to the EventStream from inside a handler.&#39;</span>
+</span></span><span style="display:flex;"><span>        )
+</span></span></code></pre></div><p><strong>防护机制</strong>：</p>
+<ul>
+<li>已分配 ID 的事件不能重新发布</li>
+<li>ID 在 publish 时才分配</li>
+<li>处理器内部发布的事件会触发错误</li>
+</ul>
+</blockquote>
+<hr>
+<h3 id="q10-eventstream-的写缓存机制有什么作用">Q10: EventStream 的写缓存机制有什么作用？<a hidden class="anchor" aria-hidden="true" href="#q10-eventstream-的写缓存机制有什么作用">#</a></h3>
+<p><strong>参考答案</strong>：</p>
+<blockquote>
+<p><strong>缓存机制</strong>：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>_write_page_cache: list[dict] <span style="color:#f92672">=</span> []
+</span></span><span style="display:flex;"><span>cache_size: int <span style="color:#f92672">=</span> <span style="color:#ae81ff">25</span>  <span style="color:#75715e"># 默认 25 个事件</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">add_event</span>(self, event, source):
+</span></span><span style="display:flex;"><span>    self<span style="color:#f92672">.</span>_write_page_cache<span style="color:#f92672">.</span>append(data)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> len(self<span style="color:#f92672">.</span>_write_page_cache) <span style="color:#f92672">==</span> self<span style="color:#f92672">.</span>cache_size:
+</span></span><span style="display:flex;"><span>        self<span style="color:#f92672">.</span>_store_cache_page(self<span style="color:#f92672">.</span>_write_page_cache)
+</span></span><span style="display:flex;"><span>        self<span style="color:#f92672">.</span>_write_page_cache <span style="color:#f92672">=</span> []
+</span></span></code></pre></div><p><strong>作用</strong>：</p>
+<ol>
+<li><strong>减少 I/O</strong>：25 个事件批量写入一次</li>
+<li><strong>提升性能</strong>：减少文件 open/close</li>
+<li><strong>缓存页读取</strong>：批量读取比逐个读取快</li>
+</ol>
+<p><strong>权衡</strong>：</p>
+<ul>
+<li>缓存越大，I/O 越少，但内存占用越高</li>
+<li>崩溃可能丢失未持久化的事件（最多 25 个）</li>
+</ul>
+</blockquote>
+<hr>
+<h3 id="q11-多-eventstore-实现是什么为什么要这样设计">Q11: 多 EventStore 实现是什么？为什么要这样设计？<a hidden class="anchor" aria-hidden="true" href="#q11-多-eventstore-实现是什么为什么要这样设计">#</a></h3>
+<p><strong>参考答案</strong>：</p>
+<blockquote>
+<p><strong>多种实现</strong>：</p>
+<ol>
+<li><strong>EventStore</strong>：本地文件存储</li>
+<li><strong>NestedEventStore</strong>：HTTP API 远程存储</li>
+<li><strong>AsyncEventStoreWrapper</strong>：同步转异步包装</li>
+</ol>
+<p><strong>设计原因</strong>：</p>
+<ul>
+<li><strong>EventStore</strong>：本地开发/部署</li>
+<li><strong>NestedEventStore</strong>：分布式部署，多个 Agent 节点共享事件</li>
+<li><strong>策略模式</strong>：可替换存储后端</li>
+</ul>
+<p><strong>接口统一</strong>：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">EventStoreABC</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">@abstractmethod</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">search_events</span>(<span style="color:#f92672">...</span>): <span style="color:#f92672">...</span>
+</span></span></code></pre></div><p>任何实现此接口的存储都可以使用</p>
+</blockquote>
+
+
+  </div>
+
+  <footer class="post-footer">
+    <ul class="post-tags">
+    </ul>
+  </footer>
+</article>
+    </main>
+    
+<footer class="footer">
+        <span>&copy; 2026 <a href="http://localhost:1313/">My New Hugo Project</a></span> · 
+
+    <span>
+        Powered by
+        <a href="https://gohugo.io/" rel="noopener noreferrer" target="_blank">Hugo</a> &
+        <a href="https://github.com/adityatelange/hugo-PaperMod/" rel="noopener" target="_blank">PaperMod</a>
+    </span>
+</footer>
+<a href="#top" aria-label="go to top" title="Go to Top (Alt + G)" class="top-link" id="top-link" accesskey="g">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 6" fill="currentColor">
+        <path d="M12 6H0l6-6z" />
+    </svg>
+</a>
+
+<script>
+    let menu = document.getElementById('menu');
+    if (menu) {
+        
+        const scrollPosition = localStorage.getItem("menu-scroll-position");
+        if (scrollPosition) {
+            menu.scrollLeft = parseInt(scrollPosition, 10);
+        }
+        
+        menu.onscroll = function () {
+            localStorage.setItem("menu-scroll-position", menu.scrollLeft);
+        }
+    }
+
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener("click", function (e) {
+            e.preventDefault();
+            var id = this.getAttribute("href").substr(1);
+            if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView({
+                    behavior: "smooth"
+                });
+            } else {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView();
+            }
+            if (id === "top") {
+                history.replaceState(null, null, " ");
+            } else {
+                history.pushState(null, null, `#${id}`);
+            }
+        });
+    });
+
+</script>
+<script>
+    var mybutton = document.getElementById("top-link");
+    window.onscroll = function () {
+        if (document.body.scrollTop > 800 || document.documentElement.scrollTop > 800) {
+            mybutton.style.visibility = "visible";
+            mybutton.style.opacity = "1";
+        } else {
+            mybutton.style.visibility = "hidden";
+            mybutton.style.opacity = "0";
+        }
+    };
+
+</script>
+<script>
+    document.getElementById("theme-toggle").addEventListener("click", () => {
+        const html = document.querySelector("html");
+        if (html.dataset.theme === "dark") {
+            html.dataset.theme = 'light';
+            localStorage.setItem("pref-theme", 'light');
+        } else {
+            html.dataset.theme = 'dark';
+            localStorage.setItem("pref-theme", 'dark');
+        }
+    })
+
+</script>
+</body>
+
+</html>

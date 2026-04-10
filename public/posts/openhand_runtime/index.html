@@ -1,0 +1,1288 @@
+<!DOCTYPE html>
+<html lang="en" dir="auto" data-theme="auto">
+
+<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script><meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<meta name="robots" content="noindex, nofollow">
+<title>Openhand_runtime | My New Hugo Project</title>
+<meta name="keywords" content="">
+<meta name="description" content="目录
+
+概述
+Base Runtime 抽象接口
+DockerRuntime 实现
+LocalRuntime 实现
+RemoteRuntime 与 KubernetesRuntime
+Action Execution Server
+动作执行机制
+沙箱管理
+安全机制
+架构流程图
+面试问题
+
+
+1. 概述
+1.1 什么是 Runtime
+Runtime 是 OpenHands 的&quot;手脚&quot;，负责在实际隔离环境中执行 Agent 生成的 Action。
+文件: /home/gdw/tutorial/OpenHands/openhands/runtime/
+1.2 Runtime 职责
+Runtime
+    │
+    ├── 执行 Bash 命令
+    ├── 执行 Python 代码 (IPython/Jupyter)
+    ├── 文件系统操作 (读/写/编辑)
+    ├── 浏览器自动化
+    ├── MCP 工具调用
+    └── 环境隔离
+1.3 运行时类型
+
+  
+      
+          运行时
+          说明
+      
+  
+  
+      
+          DockerRuntime
+          Docker 容器隔离（默认）
+      
+      
+          LocalRuntime
+          本地机器执行（无隔离）
+      
+      
+          RemoteRuntime
+          连接远程运行时服务器
+      
+      
+          KubernetesRuntime
+          K8s 集群中执行
+      
+  
+
+
+2. Base Runtime 抽象接口
+2.1 Runtime 基类
+文件: /home/gdw/tutorial/OpenHands/openhands/runtime/base.py">
+<meta name="author" content="">
+<link rel="canonical" href="http://localhost:1313/posts/openhand_runtime/">
+<link crossorigin="anonymous" href="/assets/css/stylesheet.199042e659bc7245f5609d333d6c044eb554a0640849bb874e1dff8eb0f57209.css" integrity="sha256-GZBC5lm8ckX1YJ0zPWwETrVUoGQISbuHTh3/jrD1cgk=" rel="preload stylesheet" as="style">
+<link rel="icon" href="http://localhost:1313/favicon.ico">
+<link rel="icon" type="image/png" sizes="16x16" href="http://localhost:1313/favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="http://localhost:1313/favicon-32x32.png">
+<link rel="apple-touch-icon" href="http://localhost:1313/apple-touch-icon.png">
+<link rel="mask-icon" href="http://localhost:1313/safari-pinned-tab.svg">
+<meta name="theme-color" content="#2e2e33">
+<meta name="msapplication-TileColor" content="#2e2e33">
+<link rel="alternate" hreflang="en" href="http://localhost:1313/posts/openhand_runtime/">
+<noscript>
+    <style>
+        #theme-toggle,
+        .top-link {
+            display: none;
+        }
+
+    </style>
+    <style>
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --theme: rgb(29, 30, 32);
+                --entry: rgb(46, 46, 51);
+                --primary: rgb(218, 218, 219);
+                --secondary: rgb(155, 156, 157);
+                --tertiary: rgb(65, 66, 68);
+                --content: rgb(196, 196, 197);
+                --code-block-bg: rgb(46, 46, 51);
+                --code-bg: rgb(55, 56, 62);
+                --border: rgb(51, 51, 51);
+                color-scheme: dark;
+            }
+
+            .list {
+                background: var(--theme);
+            }
+
+            .toc {
+                background: var(--entry);
+            }
+        }
+
+        @media (prefers-color-scheme: light) {
+            .list::-webkit-scrollbar-thumb {
+                border-color: var(--code-bg);
+            }
+        }
+
+    </style>
+</noscript>
+<script>
+    if (localStorage.getItem("pref-theme") === "dark") {
+        document.querySelector("html").dataset.theme = 'dark';
+    } else if (localStorage.getItem("pref-theme") === "light") {
+       document.querySelector("html").dataset.theme = 'light';
+    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.querySelector("html").dataset.theme = 'dark';
+    } else {
+        document.querySelector("html").dataset.theme = 'light';
+    }
+
+</script>
+</head>
+<body id="top">
+    <header class="header">
+    <nav class="nav">
+        <div class="logo">
+            <a href="http://localhost:1313/" accesskey="h" title="My New Hugo Project (Alt + H)">My New Hugo Project</a>
+            <div class="logo-switches">
+                <button id="theme-toggle" accesskey="t" title="(Alt + T)" aria-label="Toggle theme">
+                    <svg id="moon" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                    <svg id="sun" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <ul id="menu">
+        </ul>
+    </nav>
+</header>
+<main class="main">
+
+<article class="post-single">
+  <header class="post-header">
+    
+    <h1 class="post-title entry-hint-parent">
+      Openhand_runtime
+    </h1>
+    <div class="post-meta"><span title='2026-04-10 09:51:52 +0800 CST'>April 10, 2026</span>
+
+</div>
+  </header> 
+  <div class="post-content"><h2 id="目录">目录<a hidden class="anchor" aria-hidden="true" href="#目录">#</a></h2>
+<ol>
+<li><a href="#1-%E6%A6%82%E8%BF%B0">概述</a></li>
+<li><a href="#2-base-runtime-%E6%8A%BD%E8%B1%A1%E6%8E%A5%E5%8F%A3">Base Runtime 抽象接口</a></li>
+<li><a href="#3-dockerruntime-%E5%AE%9E%E7%8E%B0">DockerRuntime 实现</a></li>
+<li><a href="#4-localruntime-%E5%AE%9E%E7%8E%B0">LocalRuntime 实现</a></li>
+<li><a href="#5-remoteruntime-%E4%B8%8E-kubernetesruntime">RemoteRuntime 与 KubernetesRuntime</a></li>
+<li><a href="#6-action-execution-server">Action Execution Server</a></li>
+<li><a href="#7-%E5%8A%A8%E4%BD%9C%E6%89%A7%E8%A1%8C%E6%9C%BA%E5%88%B6">动作执行机制</a></li>
+<li><a href="#8-%E6%B2%99%E7%AE%B1%E7%AE%A1%E7%90%86">沙箱管理</a></li>
+<li><a href="#9-%E5%AE%89%E5%85%A8%E6%9C%BA%E5%88%B6">安全机制</a></li>
+<li><a href="#10-%E6%9E%B6%E6%9E%84%E6%B5%81%E7%A8%8B%E5%9B%BE">架构流程图</a></li>
+<li><a href="#11-%E9%9D%A2%E8%AF%95%E9%97%AE%E9%A2%98">面试问题</a></li>
+</ol>
+<hr>
+<h2 id="1-概述">1. 概述<a hidden class="anchor" aria-hidden="true" href="#1-概述">#</a></h2>
+<h3 id="11-什么是-runtime">1.1 什么是 Runtime<a hidden class="anchor" aria-hidden="true" href="#11-什么是-runtime">#</a></h3>
+<p><strong>Runtime</strong> 是 OpenHands 的&quot;手脚&quot;，负责在实际隔离环境中执行 Agent 生成的 Action。</p>
+<p><strong>文件</strong>: <code>/home/gdw/tutorial/OpenHands/openhands/runtime/</code></p>
+<h3 id="12-runtime-职责">1.2 Runtime 职责<a hidden class="anchor" aria-hidden="true" href="#12-runtime-职责">#</a></h3>
+<pre tabindex="0"><code>Runtime
+    │
+    ├── 执行 Bash 命令
+    ├── 执行 Python 代码 (IPython/Jupyter)
+    ├── 文件系统操作 (读/写/编辑)
+    ├── 浏览器自动化
+    ├── MCP 工具调用
+    └── 环境隔离
+</code></pre><h3 id="13-运行时类型">1.3 运行时类型<a hidden class="anchor" aria-hidden="true" href="#13-运行时类型">#</a></h3>
+<table>
+  <thead>
+      <tr>
+          <th>运行时</th>
+          <th>说明</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><strong>DockerRuntime</strong></td>
+          <td>Docker 容器隔离（默认）</td>
+      </tr>
+      <tr>
+          <td><strong>LocalRuntime</strong></td>
+          <td>本地机器执行（无隔离）</td>
+      </tr>
+      <tr>
+          <td><strong>RemoteRuntime</strong></td>
+          <td>连接远程运行时服务器</td>
+      </tr>
+      <tr>
+          <td><strong>KubernetesRuntime</strong></td>
+          <td>K8s 集群中执行</td>
+      </tr>
+  </tbody>
+</table>
+<hr>
+<h2 id="2-base-runtime-抽象接口">2. Base Runtime 抽象接口<a hidden class="anchor" aria-hidden="true" href="#2-base-runtime-抽象接口">#</a></h2>
+<h3 id="21-runtime-基类">2.1 Runtime 基类<a hidden class="anchor" aria-hidden="true" href="#21-runtime-基类">#</a></h3>
+<p><strong>文件</strong>: <code>/home/gdw/tutorial/OpenHands/openhands/runtime/base.py</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">Runtime</span>(ABC):
+</span></span><span style="display:flex;"><span>    sid: str                    <span style="color:#75715e"># Session ID</span>
+</span></span><span style="display:flex;"><span>    config: OpenHandsConfig     <span style="color:#75715e"># 配置</span>
+</span></span><span style="display:flex;"><span>    initial_env_vars: dict[str, str]  <span style="color:#75715e"># 环境变量</span>
+</span></span><span style="display:flex;"><span>    attach_to_existing: bool    <span style="color:#75715e"># 是否附加到现有运行时</span>
+</span></span><span style="display:flex;"><span>    status_callback: Callable   <span style="color:#75715e"># 状态回调</span>
+</span></span><span style="display:flex;"><span>    runtime_status: RuntimeStatus  <span style="color:#75715e"># 当前状态</span>
+</span></span><span style="display:flex;"><span>    security_analyzer: SecurityAnalyzer  <span style="color:#75715e"># 安全分析</span>
+</span></span></code></pre></div><h3 id="22-状态流转">2.2 状态流转<a hidden class="anchor" aria-hidden="true" href="#22-状态流转">#</a></h3>
+<pre tabindex="0"><code>STOPPED → BUILDING_RUNTIME → STARTING_RUNTIME → RUNTIME_STARTED →
+SETTING_UP_WORKSPACE → SETTING_UP_GIT_HOOKS → READY
+</code></pre><h3 id="23-抽象方法">2.3 抽象方法<a hidden class="anchor" aria-hidden="true" href="#23-抽象方法">#</a></h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">Runtime</span>(ABC):
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">@abstractmethod</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">async</span> <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">connect</span>(self) <span style="color:#f92672">-&gt;</span> <span style="color:#66d9ef">None</span>:
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#34;&#34;&#34;连接到运行时&#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">pass</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">@abstractmethod</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">run</span>(self, action: CmdRunAction) <span style="color:#f92672">-&gt;</span> CmdOutputObservation:
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#34;&#34;&#34;执行 Bash 命令&#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">pass</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">@abstractmethod</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">run_ipython</span>(self, action: IPythonRunCellAction) <span style="color:#f92672">-&gt;</span> IPythonRunCellObservation:
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#34;&#34;&#34;执行 Python 代码&#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">pass</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">@abstractmethod</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">read</span>(self, action: FileReadAction) <span style="color:#f92672">-&gt;</span> FileReadObservation:
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#34;&#34;&#34;读取文件&#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">pass</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">@abstractmethod</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">write</span>(self, action: FileWriteAction) <span style="color:#f92672">-&gt;</span> FileWriteObservation:
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#34;&#34;&#34;写入文件&#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">pass</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">@abstractmethod</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">edit</span>(self, action: FileEditAction) <span style="color:#f92672">-&gt;</span> FileEditObservation:
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#34;&#34;&#34;编辑文件&#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">pass</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">@abstractmethod</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">browse</span>(self, action: BrowseURLAction) <span style="color:#f92672">-&gt;</span> BrowserOutputObservation:
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#34;&#34;&#34;浏览 URL&#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">pass</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">@abstractmethod</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">browse_interactive</span>(self, action: BrowseInteractiveAction) <span style="color:#f92672">-&gt;</span> BrowserOutputObservation:
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#34;&#34;&#34;交互浏览&#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">pass</span>
+</span></span></code></pre></div><hr>
+<h2 id="3-dockerruntime-实现">3. DockerRuntime 实现<a hidden class="anchor" aria-hidden="true" href="#3-dockerruntime-实现">#</a></h2>
+<h3 id="31-架构概述">3.1 架构概述<a hidden class="anchor" aria-hidden="true" href="#31-架构概述">#</a></h3>
+<p><strong>文件</strong>: <code>/home/gdw/tutorial/OpenHands/openhands/runtime/impl/docker/docker_runtime.py</code></p>
+<p>DockerRuntime 继承自 <code>ActionExecutionClient</code>，通过 HTTP 与容器内的 ActionExecutionServer 通信。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">DockerRuntime</span>(ActionExecutionClient):
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># 端口范围</span>
+</span></span><span style="display:flex;"><span>    EXECUTION_SERVER_PORT_RANGE <span style="color:#f92672">=</span> (<span style="color:#ae81ff">30000</span>, <span style="color:#ae81ff">39999</span>)
+</span></span><span style="display:flex;"><span>    VSCODE_PORT_RANGE <span style="color:#f92672">=</span> (<span style="color:#ae81ff">40000</span>, <span style="color:#ae81ff">49999</span>)
+</span></span><span style="display:flex;"><span>    APP_PORT_RANGE_1 <span style="color:#f92672">=</span> (<span style="color:#ae81ff">50000</span>, <span style="color:#ae81ff">54999</span>)
+</span></span><span style="display:flex;"><span>    APP_PORT_RANGE_2 <span style="color:#f92672">=</span> (<span style="color:#ae81ff">55000</span>, <span style="color:#ae81ff">59999</span>)
+</span></span></code></pre></div><h3 id="32-容器初始化流程">3.2 容器初始化流程<a hidden class="anchor" aria-hidden="true" href="#32-容器初始化流程">#</a></h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">async</span> <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">connect</span>(self) <span style="color:#f92672">-&gt;</span> <span style="color:#66d9ef">None</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;&#34;&#34;连接到 Docker 容器&#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> self<span style="color:#f92672">.</span>attach_to_existing:
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">await</span> self<span style="color:#f92672">.</span>_attach_to_container()
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">else</span>:
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">await</span> self<span style="color:#f92672">.</span>init_container()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">await</span> self<span style="color:#f92672">.</span>wait_until_alive()
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">await</span> self<span style="color:#f92672">.</span>setup_initial_env()
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">await</span> self<span style="color:#f92672">.</span>set_runtime_status(READY)
+</span></span></code></pre></div><h3 id="33-容器创建">3.3 容器创建<a hidden class="anchor" aria-hidden="true" href="#33-容器创建">#</a></h3>
+<p><strong>init_container()</strong> 流程：</p>
+<ol>
+<li><strong>分配端口</strong>（带文件锁）</li>
+</ol>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>port <span style="color:#f92672">=</span> self<span style="color:#f92672">.</span>_allocate_port(
+</span></span><span style="display:flex;"><span>    self<span style="color:#f92672">.</span>EXECUTION_SERVER_PORT_RANGE,
+</span></span><span style="display:flex;"><span>    lock_dir<span style="color:#f92672">=</span>self<span style="color:#f92672">.</span>sandbox_dir
+</span></span><span style="display:flex;"><span>)
+</span></span></code></pre></div><ol start="2">
+<li><strong>配置环境变量</strong></li>
+</ol>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>env <span style="color:#f92672">=</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#39;port&#39;</span>: str(port),
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#39;VSCODE_PORT&#39;</span>: str(vscode_port),
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#39;APP_PORT_1&#39;</span>: str(app_port_1),
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#39;APP_PORT_2&#39;</span>: str(app_port_2),
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#39;SESSION_API_KEY&#39;</span>: self<span style="color:#f92672">.</span>_get_session_api_key(),
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">...</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><ol start="3">
+<li><strong>处理卷挂载</strong></li>
+</ol>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>volumes <span style="color:#f92672">=</span> self<span style="color:#f92672">.</span>_process_volumes(bind_mounts, overlay_mounts)
+</span></span></code></pre></div><ol start="4">
+<li><strong>创建并启动容器</strong></li>
+</ol>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>container <span style="color:#f92672">=</span> self<span style="color:#f92672">.</span>docker_client<span style="color:#f92672">.</span>containers<span style="color:#f92672">.</span>run(
+</span></span><span style="display:flex;"><span>    image<span style="color:#f92672">=</span>self<span style="color:#f92672">.</span>runtime_base_image,
+</span></span><span style="display:flex;"><span>    command<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;...&#39;</span>,
+</span></span><span style="display:flex;"><span>    volumes<span style="color:#f92672">=</span>volumes,
+</span></span><span style="display:flex;"><span>    ports<span style="color:#f92672">=</span>{<span style="color:#e6db74">&#39;30000/tcp&#39;</span>: port},
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">...</span>
+</span></span><span style="display:flex;"><span>)
+</span></span></code></pre></div><h3 id="34-卷挂载类型">3.4 卷挂载类型<a hidden class="anchor" aria-hidden="true" href="#34-卷挂载类型">#</a></h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#75715e"># 绑定挂载 - 直接映射主机路径</span>
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#39;type&#39;</span>: <span style="color:#e6db74">&#39;bind&#39;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#39;source&#39;</span>: <span style="color:#e6db74">&#39;/host/path&#39;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#39;target&#39;</span>: <span style="color:#e6db74">&#39;/container/path&#39;</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Overlay 挂载 - 写时复制</span>
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#39;type&#39;</span>: <span style="color:#e6db74">&#39;overlay&#39;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#39;device&#39;</span>: <span style="color:#e6db74">&#39;overlay&#39;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#39;o&#39;</span>: <span style="color:#e6db74">&#39;lowerdir=/host/path,upperdir=/container/upper,workdir=/container/work&#39;</span>
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p><strong>Overlay 机制</strong>：</p>
+<ul>
+<li>lowerdir：只读底层（主机路径）</li>
+<li>upperdir：容器专属的可写层</li>
+<li>workdir：工作目录</li>
+<li>实现 COW（Copy-on-Write）效率</li>
+</ul>
+<hr>
+<h2 id="4-localruntime-实现">4. LocalRuntime 实现<a hidden class="anchor" aria-hidden="true" href="#4-localruntime-实现">#</a></h2>
+<h3 id="41-架构概述">4.1 架构概述<a hidden class="anchor" aria-hidden="true" href="#41-架构概述">#</a></h3>
+<p><strong>文件</strong>: <code>/home/gdw/tutorial/OpenHands/openhands/runtime/impl/local/local_runtime.py</code></p>
+<p>LocalRuntime 直接在本地机器执行 action_execution_server，无沙箱隔离。</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">LocalRuntime</span>(Runtime):
+</span></span><span style="display:flex;"><span>    _WARM_SERVERS: list[ActionExecutionServerInfo] <span style="color:#f92672">=</span> []  <span style="color:#75715e"># 预热服务器池</span>
+</span></span><span style="display:flex;"><span>    _RUNNING_SERVERS: dict[str, ActionExecutionServerInfo] <span style="color:#f92672">=</span> {}
+</span></span></code></pre></div><h3 id="42-预热池机制">4.2 预热池机制<a hidden class="anchor" aria-hidden="true" href="#42-预热池机制">#</a></h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#75715e"># 环境变量配置</span>
+</span></span><span style="display:flex;"><span>INITIAL_NUM_WARM_SERVERS<span style="color:#f92672">=</span><span style="color:#ae81ff">0</span>    <span style="color:#75715e"># 启动时创建数量</span>
+</span></span><span style="display:flex;"><span>DESIRED_NUM_WARM_SERVERS<span style="color:#f92672">=</span><span style="color:#ae81ff">0</span>    <span style="color:#75715e"># 目标池大小</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">_create_warm_server</span>(self) <span style="color:#f92672">-&gt;</span> ActionExecutionServerInfo:
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;&#34;&#34;创建预热服务器&#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>    server <span style="color:#f92672">=</span> ActionExecutionServer(<span style="color:#f92672">...</span>)
+</span></span><span style="display:flex;"><span>    server<span style="color:#f92672">.</span>start()  <span style="color:#75715e"># 在后台线程启动</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> ActionExecutionServerInfo(
+</span></span><span style="display:flex;"><span>        pid<span style="color:#f92672">=</span>proc<span style="color:#f92672">.</span>pid,
+</span></span><span style="display:flex;"><span>        port<span style="color:#f92672">=</span>port,
+</span></span><span style="display:flex;"><span>        server<span style="color:#f92672">=</span>server,
+</span></span><span style="display:flex;"><span>        workspace_dir<span style="color:#f92672">=</span>workspace_dir
+</span></span><span style="display:flex;"><span>    )
+</span></span></code></pre></div><p><strong>预热池流程</strong>：</p>
+<ol>
+<li>启动时创建 <code>INITIAL_NUM_WARM_SERVERS</code> 个服务器</li>
+<li>使用时从池中取出</li>
+<li>使用后检查池大小，必要时补充</li>
+</ol>
+<h3 id="43-localruntime-警告">4.3 LocalRuntime 警告<a hidden class="anchor" aria-hidden="true" href="#43-localruntime-警告">#</a></h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">__init__</span>(self, <span style="color:#f92672">...</span>):
+</span></span><span style="display:flex;"><span>    logger<span style="color:#f92672">.</span>warning(
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#39;Initializing LocalRuntime. WARNING: NO SANDBOX IS USED. &#39;</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#39;This is an experimental feature...&#39;</span>
+</span></span><span style="display:flex;"><span>    )
+</span></span></code></pre></div><p><strong>无隔离风险</strong>：</p>
+<ul>
+<li>命令直接在宿主机执行</li>
+<li>有风险的操作可能影响主机</li>
+<li>仅用于开发/测试</li>
+</ul>
+<hr>
+<h2 id="5-remoteruntime-与-kubernetesruntime">5. RemoteRuntime 与 KubernetesRuntime<a hidden class="anchor" aria-hidden="true" href="#5-remoteruntime-与-kubernetesruntime">#</a></h2>
+<h3 id="51-remoteruntime">5.1 RemoteRuntime<a hidden class="anchor" aria-hidden="true" href="#51-remoteruntime">#</a></h3>
+<p><strong>文件</strong>: <code>/home/gdw/tutorial/OpenHands/openhands/runtime/impl/remote/remote_runtime.py</code></p>
+<p>连接远程运行时服务器：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">RemoteRuntime</span>(Runtime):
+</span></span><span style="display:flex;"><span>    api_key: str                          <span style="color:#75715e"># 认证</span>
+</span></span><span style="display:flex;"><span>    remote_runtime_api_url: str           <span style="color:#75715e"># API 端点</span>
+</span></span><span style="display:flex;"><span>    remote_runtime_resource_factor: float  <span style="color:#75715e"># 资源因子</span>
+</span></span></code></pre></div><h3 id="52-kubernetesruntime">5.2 KubernetesRuntime<a hidden class="anchor" aria-hidden="true" href="#52-kubernetesruntime">#</a></h3>
+<p><strong>文件</strong>: <code>/home/gdw/tutorial/OpenHands/openhands/runtime/impl/kubernetes/kubernetes_runtime.py</code></p>
+<p>在 K8s 集群中创建 Pod：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">KubernetesRuntime</span>(Runtime):
+</span></span><span style="display:flex;"><span>    _k8s_config: KubernetesConfig
+</span></span><span style="display:flex;"><span>    _namespace: str <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;openhands&#39;</span>
+</span></span></code></pre></div><p><strong>创建的资源</strong>：</p>
+<ul>
+<li><strong>Pod</strong>：主运行时容器</li>
+<li><strong>Service</strong>：ClusterIP 内部通信</li>
+<li><strong>PVC</strong>：PersistentVolumeClaim 存储</li>
+<li><strong>Ingress</strong>：外部访问 VSCode</li>
+</ul>
+<p><strong>Pod 配置</strong>：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>V1Pod(
+</span></span><span style="display:flex;"><span>    spec<span style="color:#f92672">=</span>V1PodSpec(
+</span></span><span style="display:flex;"><span>        containers<span style="color:#f92672">=</span>[V1Container(
+</span></span><span style="display:flex;"><span>            name<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;runtime&#39;</span>,
+</span></span><span style="display:flex;"><span>            image<span style="color:#f92672">=</span>self<span style="color:#f92672">.</span>pod_image,
+</span></span><span style="display:flex;"><span>            ports<span style="color:#f92672">=</span>container_ports,
+</span></span><span style="display:flex;"><span>            volume_mounts<span style="color:#f92672">=</span>volume_mounts,
+</span></span><span style="display:flex;"><span>            resources<span style="color:#f92672">=</span>V1ResourceRequirements(
+</span></span><span style="display:flex;"><span>                limits<span style="color:#f92672">=</span>{<span style="color:#e6db74">&#39;memory&#39;</span>: memory_limit},
+</span></span><span style="display:flex;"><span>                requests<span style="color:#f92672">=</span>{<span style="color:#e6db74">&#39;cpu&#39;</span>: cpu_request, <span style="color:#e6db74">&#39;memory&#39;</span>: memory_request}
+</span></span><span style="display:flex;"><span>            ),
+</span></span><span style="display:flex;"><span>            readiness_probe<span style="color:#f92672">=</span>health_check,
+</span></span><span style="display:flex;"><span>            security_context<span style="color:#f92672">=</span>V1SecurityContext(privileged<span style="color:#f92672">=</span>privileged)
+</span></span><span style="display:flex;"><span>        )],
+</span></span><span style="display:flex;"><span>        volumes<span style="color:#f92672">=</span>volumes,
+</span></span><span style="display:flex;"><span>        node_selector<span style="color:#f92672">=</span>node_selector,
+</span></span><span style="display:flex;"><span>        tolerations<span style="color:#f92672">=</span>tolerations
+</span></span><span style="display:flex;"><span>    )
+</span></span><span style="display:flex;"><span>)
+</span></span></code></pre></div><hr>
+<h2 id="6-action-execution-server">6. Action Execution Server<a hidden class="anchor" aria-hidden="true" href="#6-action-execution-server">#</a></h2>
+<h3 id="61-http-api-端点">6.1 HTTP API 端点<a hidden class="anchor" aria-hidden="true" href="#61-http-api-端点">#</a></h3>
+<p><strong>文件</strong>: <code>/home/gdw/tutorial/OpenHands/openhands/runtime/action_execution_server.py</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">ActionExecutionServer</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">@app.get</span>(<span style="color:#e6db74">&#39;/alive&#39;</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">async</span> <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">alive</span>(): <span style="color:#f92672">...</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">@app.post</span>(<span style="color:#e6db74">&#39;/execute_action&#39;</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">async</span> <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">execute_action</span>(action: Action): <span style="color:#f92672">...</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">@app.post</span>(<span style="color:#e6db74">&#39;/list_files&#39;</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">async</span> <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">list_files</span>(path: str): <span style="color:#f92672">...</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">@app.post</span>(<span style="color:#e6db74">&#39;/upload_file&#39;</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">async</span> <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">upload_file</span>(file: UploadFile, path: str): <span style="color:#f92672">...</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">@app.get</span>(<span style="color:#e6db74">&#39;/download_files&#39;</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">async</span> <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">download_files</span>(path: str): <span style="color:#f92672">...</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">@app.post</span>(<span style="color:#e6db74">&#39;/update_mcp_server&#39;</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">async</span> <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">update_mcp_server</span>(config: MCPConfig): <span style="color:#f92672">...</span>
+</span></span></code></pre></div><h3 id="62-actionexecutor">6.2 ActionExecutor<a hidden class="anchor" aria-hidden="true" href="#62-actionexecutor">#</a></h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">ActionExecutor</span>:
+</span></span><span style="display:flex;"><span>    bash_session: BashSession           <span style="color:#75715e"># TMUX 会话</span>
+</span></span><span style="display:flex;"><span>    plugins: dict[str, Plugin]         <span style="color:#75715e"># 插件</span>
+</span></span><span style="display:flex;"><span>    file_editor: OHEditor              <span style="color:#75715e"># 文件编辑器</span>
+</span></span><span style="display:flex;"><span>    browser: BrowserEnv                 <span style="color:#75715e"># 浏览器</span>
+</span></span><span style="display:flex;"><span>    memory_monitor: MemoryMonitor        <span style="color:#75715e"># 内存监控</span>
+</span></span></code></pre></div><p><strong>执行入口</strong>：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">async</span> <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">run_action</span>(self, action) <span style="color:#f92672">-&gt;</span> Observation:
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">async</span> <span style="color:#66d9ef">with</span> self<span style="color:#f92672">.</span>lock:  <span style="color:#75715e"># 信号量保证单动作执行</span>
+</span></span><span style="display:flex;"><span>        action_type <span style="color:#f92672">=</span> action<span style="color:#f92672">.</span>action
+</span></span><span style="display:flex;"><span>        observation <span style="color:#f92672">=</span> <span style="color:#66d9ef">await</span> getattr(self, action_type)(action)
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> observation
+</span></span></code></pre></div><hr>
+<h2 id="7-动作执行机制">7. 动作执行机制<a hidden class="anchor" aria-hidden="true" href="#7-动作执行机制">#</a></h2>
+<h3 id="71-bash-执行">7.1 Bash 执行<a hidden class="anchor" aria-hidden="true" href="#71-bash-执行">#</a></h3>
+<p><strong>文件</strong>: <code>/home/gdw/tutorial/OpenHands/openhands/runtime/utils/bash.py</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">BashSession</span>:
+</span></span><span style="display:flex;"><span>    session: libtmux<span style="color:#f92672">.</span>Session    <span style="color:#75715e"># TMUX 会话</span>
+</span></span><span style="display:flex;"><span>    window: libtmux<span style="color:#f92672">.</span>Window       <span style="color:#75715e"># TMUX 窗口</span>
+</span></span><span style="display:flex;"><span>    pane: libtmux<span style="color:#f92672">.</span>Pane           <span style="color:#75715e"># TMUX 窗格</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># 超时配置</span>
+</span></span><span style="display:flex;"><span>    NO_CHANGE_TIMEOUT_SECONDS: int <span style="color:#f92672">=</span> <span style="color:#ae81ff">30</span>  <span style="color:#75715e"># 无输出检测</span>
+</span></span><span style="display:flex;"><span>    POLL_INTERVAL: float <span style="color:#f92672">=</span> <span style="color:#ae81ff">0.5</span>            <span style="color:#75715e"># 轮询间隔</span>
+</span></span></code></pre></div><p><strong>命令解析</strong>：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#75715e"># 使用 bashlex 解析复合命令</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">import</span> bashlex
+</span></span><span style="display:flex;"><span>ast <span style="color:#f92672">=</span> bashlex<span style="color:#f92672">.</span>parse(command)
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 处理分号分隔和 &amp;&amp; 链接的命令</span>
+</span></span></code></pre></div><p><strong>输出提取</strong>：</p>
+<ul>
+<li>注入特殊 PS1 提示符 <code>[POH]</code></li>
+<li>正则匹配提取：exit_code、working_dir、timestamp</li>
+<li>处理 TMUX 历史限制导致的截断</li>
+</ul>
+<p><strong>超时处理</strong>：</p>
+<ol>
+<li><strong>无变化超时</strong>：输出停滞 30 秒</li>
+<li><strong>硬超时</strong>：超过动作指定的超时时间</li>
+<li><strong>Bash 会话忙</strong>：exit_code=-1，最多 3 次重试</li>
+</ol>
+<h3 id="72-ipythonjupyter-执行">7.2 IPython/Jupyter 执行<a hidden class="anchor" aria-hidden="true" href="#72-ipythonjupyter-执行">#</a></h3>
+<p><strong>文件</strong>: <code>/home/gdw/tutorial/OpenHands/openhands/runtime/plugins/jupyter/</code></p>
+<pre tabindex="0"><code>JupyterPlugin → JupyterKernel → Jupyter KernelGateway
+</code></pre><p><strong>JupyterKernel</strong>：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">JupyterKernel</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;&#34;&#34;通过 WebSocket 与 KernelGateway 通信&#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">async</span> <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">execute</span>(self, code: str) <span style="color:#f92672">-&gt;</span> dict:
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e"># 1. 发送 execute_request</span>
+</span></span><span style="display:flex;"><span>        msg <span style="color:#f92672">=</span> {
+</span></span><span style="display:flex;"><span>            <span style="color:#e6db74">&#39;header&#39;</span>: {<span style="color:#e6db74">&#39;msg_type&#39;</span>: <span style="color:#e6db74">&#39;execute_request&#39;</span>, <span style="color:#e6db74">&#39;msg_id&#39;</span>: uuid},
+</span></span><span style="display:flex;"><span>            <span style="color:#e6db74">&#39;channel&#39;</span>: <span style="color:#e6db74">&#39;shell&#39;</span>,
+</span></span><span style="display:flex;"><span>            <span style="color:#e6db74">&#39;content&#39;</span>: {
+</span></span><span style="display:flex;"><span>                <span style="color:#e6db74">&#39;code&#39;</span>: code,
+</span></span><span style="display:flex;"><span>                <span style="color:#e6db74">&#39;silent&#39;</span>: <span style="color:#66d9ef">False</span>,
+</span></span><span style="display:flex;"><span>                <span style="color:#e6db74">&#39;store_history&#39;</span>: <span style="color:#66d9ef">False</span>
+</span></span><span style="display:flex;"><span>            }
+</span></span><span style="display:flex;"><span>        }
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">await</span> self<span style="color:#f92672">.</span>websocket<span style="color:#f92672">.</span>send(json<span style="color:#f92672">.</span>dumps(msg))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e"># 2. 等待响应</span>
+</span></span><span style="display:flex;"><span>        response <span style="color:#f92672">=</span> <span style="color:#66d9ef">await</span> self<span style="color:#f92672">.</span>_wait_for_response(msg_id)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e"># 3. 解析结果</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> {
+</span></span><span style="display:flex;"><span>            <span style="color:#e6db74">&#39;output&#39;</span>: response[<span style="color:#e6db74">&#39;content&#39;</span>][<span style="color:#e6db74">&#39;data&#39;</span>],
+</span></span><span style="display:flex;"><span>            <span style="color:#e6db74">&#39;error&#39;</span>: response[<span style="color:#e6db74">&#39;content&#39;</span>]<span style="color:#f92672">.</span>get(<span style="color:#e6db74">&#39;ename&#39;</span>)
+</span></span><span style="display:flex;"><span>        }
+</span></span></code></pre></div><p><strong>支持的功能</strong>：</p>
+<ul>
+<li>标准输出/错误</li>
+<li>图像输出（PNG base64）</li>
+<li>Rich 输出</li>
+</ul>
+<h3 id="73-文件操作">7.3 文件操作<a hidden class="anchor" aria-hidden="true" href="#73-文件操作">#</a></h3>
+<p><strong>读取</strong> (<code>lines 449-516</code>)：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">read</span>(self, action: FileReadAction) <span style="color:#f92672">-&gt;</span> FileReadObservation:
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># 1. 二进制文件检测</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> is_binary(path):
+</span></span><span style="display:flex;"><span>        content <span style="color:#f92672">=</span> base64<span style="color:#f92672">.</span>b64encode(open(path, <span style="color:#e6db74">&#39;rb&#39;</span>)<span style="color:#f92672">.</span>read())<span style="color:#f92672">.</span>decode()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># 2. 支持范围读取</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> action<span style="color:#f92672">.</span>start <span style="color:#f92672">or</span> action<span style="color:#f92672">.</span>end:
+</span></span><span style="display:flex;"><span>        content <span style="color:#f92672">=</span> read_range(path, action<span style="color:#f92672">.</span>start, action<span style="color:#f92672">.</span>end)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> FileReadObservation(content<span style="color:#f92672">=</span>content)
+</span></span></code></pre></div><p><strong>写入</strong> (<code>lines 518-570</code>)：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">write</span>(self, action: FileWriteAction) <span style="color:#f92672">-&gt;</span> FileWriteObservation:
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># 1. 创建父目录</span>
+</span></span><span style="display:flex;"><span>    os<span style="color:#f92672">.</span>makedirs(os<span style="color:#f92672">.</span>path<span style="color:#f92672">.</span>dirname(action<span style="color:#f92672">.</span>path), exist_ok<span style="color:#f92672">=</span><span style="color:#66d9ef">True</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># 2. 写入文件</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">with</span> open(action<span style="color:#f92672">.</span>path, <span style="color:#e6db74">&#39;w&#39;</span>) <span style="color:#66d9ef">as</span> f:
+</span></span><span style="display:flex;"><span>        f<span style="color:#f92672">.</span>write(action<span style="color:#f92672">.</span>content)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># 3. 保持权限（可选）</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> hasattr(action, <span style="color:#e6db74">&#39;mode&#39;</span>):
+</span></span><span style="display:flex;"><span>        os<span style="color:#f92672">.</span>chmod(action<span style="color:#f92672">.</span>path, action<span style="color:#f92672">.</span>mode)
+</span></span></code></pre></div><p><strong>编辑</strong> (<code>lines 572-596</code>)：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">edit</span>(self, action: FileEditAction) <span style="color:#f92672">-&gt;</span> FileEditObservation:
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># 委托给 OHEditor</span>
+</span></span><span style="display:flex;"><span>    editor <span style="color:#f92672">=</span> OHEditor()
+</span></span><span style="display:flex;"><span>    diff <span style="color:#f92672">=</span> editor<span style="color:#f92672">.</span>edit_file(
+</span></span><span style="display:flex;"><span>        path<span style="color:#f92672">=</span>action<span style="color:#f92672">.</span>path,
+</span></span><span style="display:flex;"><span>        command<span style="color:#f92672">=</span>action<span style="color:#f92672">.</span>command,
+</span></span><span style="display:flex;"><span>        old_str<span style="color:#f92672">=</span>action<span style="color:#f92672">.</span>old_str,
+</span></span><span style="display:flex;"><span>        new_str<span style="color:#f92672">=</span>action<span style="color:#f92672">.</span>new_str,
+</span></span><span style="display:flex;"><span>        <span style="color:#f92672">...</span>
+</span></span><span style="display:flex;"><span>    )
+</span></span></code></pre></div><h3 id="74-浏览器自动化">7.4 浏览器自动化<a hidden class="anchor" aria-hidden="true" href="#74-浏览器自动化">#</a></h3>
+<p><strong>文件</strong>: <code>/home/gdw/tutorial/OpenHands/openhands/runtime/browser/browser_env.py</code></p>
+<p>基于 <strong>BrowserGym</strong> 框架：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">BrowserEnv</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;&#34;&#34;使用 BrowserGym 进行浏览器自动化&#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">__init__</span>(self):
+</span></span><span style="display:flex;"><span>        self<span style="color:#f92672">.</span>browser_process <span style="color:#f92672">=</span> <span style="color:#f92672">...</span>
+</span></span><span style="display:flex;"><span>        self<span style="color:#f92672">.</span>browser_side, self<span style="color:#f92672">.</span>env_side <span style="color:#f92672">=</span> multiprocessing<span style="color:#f92672">.</span>Pipe()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">async</span> <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">step</span>(self, action: dict) <span style="color:#f92672">-&gt;</span> tuple:
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e"># 发送动作到浏览器进程</span>
+</span></span><span style="display:flex;"><span>        self<span style="color:#f92672">.</span>browser_side<span style="color:#f92672">.</span>send((request_id, action_data))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e"># 等待结果</span>
+</span></span><span style="display:flex;"><span>        result <span style="color:#f92672">=</span> self<span style="color:#f92672">.</span>env_side<span style="color:#f92672">.</span>recv()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e"># 提取 DOM 内容</span>
+</span></span><span style="display:flex;"><span>        html_str <span style="color:#f92672">=</span> flatten_dom_to_str(result[<span style="color:#e6db74">&#39;dom_object&#39;</span>])
+</span></span><span style="display:flex;"><span>        result[<span style="color:#e6db74">&#39;text_content&#39;</span>] <span style="color:#f92672">=</span> html2text<span style="color:#f92672">.</span>handle(html_str)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> result
+</span></span></code></pre></div><p><strong>支持的环境</strong>：</p>
+<ul>
+<li><code>browsergym/openended</code>：通用浏览</li>
+<li><code>browsergym/webarena</code>：WebArena 基准</li>
+<li><code>browsergym/visualwebarena</code>：视觉 WebArena</li>
+<li><code>browsergym/miniwob</code>：MiniWoB++ 任务</li>
+</ul>
+<hr>
+<h2 id="8-沙箱管理">8. 沙箱管理<a hidden class="anchor" aria-hidden="true" href="#8-沙箱管理">#</a></h2>
+<h3 id="81-容器生命周期">8.1 容器生命周期<a hidden class="anchor" aria-hidden="true" href="#81-容器生命周期">#</a></h3>
+<pre tabindex="0"><code>__init__()
+    │
+    ▼
+connect()
+    │
+    ├──► _attach_to_container() [attach_to_existing=True]
+    │        │
+    │        └── 等待容器就绪
+    │
+    └──► init_container() [attach_to_existing=False]
+             │
+             ├── 分配端口
+             ├── 创建卷挂载
+             ├── 拉取镜像
+             ├── 创建容器
+             └── 启动容器
+    │
+    ▼
+wait_until_alive()
+    │
+    ▼
+setup_initial_env()
+    │
+    ▼
+READY (可执行动作)
+    │
+    ▼
+close()
+    │
+    ├── 停止容器
+    └── 释放端口锁
+</code></pre><h3 id="82-预热池">8.2 预热池<a hidden class="anchor" aria-hidden="true" href="#82-预热池">#</a></h3>
+<p><strong>目的</strong>：减少容器启动延迟</p>
+<pre tabindex="0"><code>首次请求
+    │
+    ▼
+检查预热池
+    │
+    ├──► 池中有可用服务器 → 直接使用
+    │
+    └──► 池为空
+             │
+             ├── 创建新服务器
+             └── 返回
+    │
+    ▼
+服务器使用后
+    │
+    ├──► 放回预热池 (如果池未满)
+    │
+    └──► 销毁 (如果池已满)
+</code></pre><h3 id="83-端口管理">8.3 端口管理<a hidden class="anchor" aria-hidden="true" href="#83-端口管理">#</a></h3>
+<p><strong>文件锁机制</strong>：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#75715e"># openhands/runtime/utils/port_lock.py</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">import</span> fcntl
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">acquire_lock</span>(lock_file):
+</span></span><span style="display:flex;"><span>    fd <span style="color:#f92672">=</span> open(lock_file, <span style="color:#e6db74">&#39;w&#39;</span>)
+</span></span><span style="display:flex;"><span>    fcntl<span style="color:#f92672">.</span>flock(fd, fcntl<span style="color:#f92672">.</span>LOCK_EX)  <span style="color:#75715e"># 阻塞直到获得锁</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> fd
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">release_lock</span>(fd):
+</span></span><span style="display:flex;"><span>    fcntl<span style="color:#f92672">.</span>flock(fd, fcntl<span style="color:#f92672">.</span>LOCK_UN)
+</span></span><span style="display:flex;"><span>    fd<span style="color:#f92672">.</span>close()
+</span></span></code></pre></div><p><strong>端口分配</strong>：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#75715e"># Linux/WSL</span>
+</span></span><span style="display:flex;"><span>EXECUTION_SERVER_PORT_RANGE <span style="color:#f92672">=</span> (<span style="color:#ae81ff">30000</span>, <span style="color:#ae81ff">39999</span>)
+</span></span><span style="display:flex;"><span>VSCODE_PORT_RANGE <span style="color:#f92672">=</span> (<span style="color:#ae81ff">40000</span>, <span style="color:#ae81ff">49999</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Windows</span>
+</span></span><span style="display:flex;"><span>EXECUTION_SERVER_PORT_RANGE <span style="color:#f92672">=</span> (<span style="color:#ae81ff">30000</span>, <span style="color:#ae81ff">34999</span>)
+</span></span><span style="display:flex;"><span>VSCODE_PORT_RANGE <span style="color:#f92672">=</span> (<span style="color:#ae81ff">35000</span>, <span style="color:#ae81ff">39999</span>)
+</span></span></code></pre></div><hr>
+<h2 id="9-安全机制">9. 安全机制<a hidden class="anchor" aria-hidden="true" href="#9-安全机制">#</a></h2>
+<h3 id="91-隔离机制">9.1 隔离机制<a hidden class="anchor" aria-hidden="true" href="#91-隔离机制">#</a></h3>
+<table>
+  <thead>
+      <tr>
+          <th>运行时</th>
+          <th>隔离级别</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><strong>DockerRuntime</strong></td>
+          <td>容器级隔离</td>
+      </tr>
+      <tr>
+          <td><strong>LocalRuntime</strong></td>
+          <td>无隔离</td>
+      </tr>
+      <tr>
+          <td><strong>KubernetesRuntime</strong></td>
+          <td>Pod 级隔离 + 资源限制</td>
+      </tr>
+      <tr>
+          <td><strong>RemoteRuntime</strong></td>
+          <td>远程服务器隔离</td>
+      </tr>
+  </tbody>
+</table>
+<h3 id="92-docker-隔离">9.2 Docker 隔离<a hidden class="anchor" aria-hidden="true" href="#92-docker-隔离">#</a></h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#75715e"># 容器安全配置</span>
+</span></span><span style="display:flex;"><span>container <span style="color:#f92672">=</span> docker_client<span style="color:#f92672">.</span>containers<span style="color:#f92672">.</span>run(
+</span></span><span style="display:flex;"><span>    image<span style="color:#f92672">=</span>self<span style="color:#f92672">.</span>runtime_base_image,
+</span></span><span style="display:flex;"><span>    security_opt<span style="color:#f92672">=</span>[<span style="color:#e6db74">&#39;seccomp:default&#39;</span>],  <span style="color:#75715e"># 安全计算</span>
+</span></span><span style="display:flex;"><span>    network_mode<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;bridge&#39;</span>,
+</span></span><span style="display:flex;"><span>    init<span style="color:#f92672">=</span><span style="color:#66d9ef">True</span>,  <span style="color:#75715e"># 使用 init 进程处理信号</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">...</span>
+</span></span><span style="display:flex;"><span>)
+</span></span></code></pre></div><h3 id="93-资源限制">9.3 资源限制<a hidden class="anchor" aria-hidden="true" href="#93-资源限制">#</a></h3>
+<p><strong>Kubernetes 资源限制</strong>：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>resources <span style="color:#f92672">=</span> V1ResourceRequirements(
+</span></span><span style="display:flex;"><span>    limits<span style="color:#f92672">=</span>{<span style="color:#e6db74">&#39;memory&#39;</span>: <span style="color:#e6db74">&#39;4Gi&#39;</span>},
+</span></span><span style="display:flex;"><span>    requests<span style="color:#f92672">=</span>{<span style="color:#e6db74">&#39;cpu&#39;</span>: <span style="color:#e6db74">&#39;500m&#39;</span>, <span style="color:#e6db74">&#39;memory&#39;</span>: <span style="color:#e6db74">&#39;1Gi&#39;</span>}
+</span></span><span style="display:flex;"><span>)
+</span></span></code></pre></div><p><strong>内存监控</strong>：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">MemoryMonitor</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">check_memory</span>(self) <span style="color:#f92672">-&gt;</span> bool:
+</span></span><span style="display:flex;"><span>        usage <span style="color:#f92672">=</span> psutil<span style="color:#f92672">.</span>Process()<span style="color:#f92672">.</span>memory_info()<span style="color:#f92672">.</span>rss
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> usage <span style="color:#f92672">&lt;</span> self<span style="color:#f92672">.</span>memory_limit
+</span></span></code></pre></div><h3 id="94-认证">9.4 认证<a hidden class="anchor" aria-hidden="true" href="#94-认证">#</a></h3>
+<p><strong>Session API Key</strong>：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#75715e"># 所有请求需要验证</span>
+</span></span><span style="display:flex;"><span>headers <span style="color:#f92672">=</span> {<span style="color:#e6db74">&#39;X-Session-API-Key&#39;</span>: SESSION_API_KEY}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 中间件验证</span>
+</span></span><span style="display:flex;"><span><span style="color:#a6e22e">@app.middleware</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">async</span> <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">auth</span>(request: Request, call_next):
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> request<span style="color:#f92672">.</span>url<span style="color:#f92672">.</span>path <span style="color:#f92672">!=</span> <span style="color:#e6db74">&#39;/alive&#39;</span>:
+</span></span><span style="display:flex;"><span>        key <span style="color:#f92672">=</span> request<span style="color:#f92672">.</span>headers<span style="color:#f92672">.</span>get(<span style="color:#e6db74">&#39;X-Session-API-Key&#39;</span>)
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> key <span style="color:#f92672">!=</span> SESSION_API_KEY:
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">raise</span> HTTPException(<span style="color:#ae81ff">401</span>)
+</span></span></code></pre></div><hr>
+<h2 id="10-架构流程图">10. 架构流程图<a hidden class="anchor" aria-hidden="true" href="#10-架构流程图">#</a></h2>
+<h3 id="101-动作执行完整流程">10.1 动作执行完整流程<a hidden class="anchor" aria-hidden="true" href="#101-动作执行完整流程">#</a></h3>
+<pre tabindex="0"><code>AgentController
+    │
+    ▼
+EventStream.add_event(action) ──────────────┐
+    │                                        │
+    │                                        │ 发布 Action
+    │                                        ▼
+    │                              ┌─────────────────┐
+    │                              │  EventStream    │
+    │                              └────────┬────────┘
+    │                                        │
+    │  异步分发                              ▼
+    │                              ┌─────────────────┐
+    │                              │     Runtime     │
+    │                              │                 │
+    │                              │ on_event()      │
+    │                              │ _handle_action()│
+    │                              └────────┬────────┘
+    │                                        │
+    │                                        ▼
+    │                              ┌─────────────────┐
+    │                              │ ActionExecutor  │
+    │                              │                 │
+    │                              │ run_action()    │
+    │                              └────────┬────────┘
+    │                                        │
+    │        ┌───────────────────────────────┼───────────────────────────────┐
+    │        │                               │                               │
+    │        ▼                               ▼                               ▼
+    │  ┌─────────────┐              ┌─────────────┐              ┌─────────────┐
+    │  │ BashSession │              │ JupyterKernel│              │ BrowserEnv  │
+    │  │ (TMUX)      │              │ (WebSocket)  │              │ (Process)   │
+    │  └──────┬──────┘              └──────┬───────┘              └──────┬──────┘
+    │         │                            │                             │
+    │         ▼                            ▼                             ▼
+    │  ┌─────────────┐              ┌─────────────┐              ┌─────────────┐
+    │  │  Shell      │              │  IPython    │              │  Browser    │
+    │  │  Command    │              │  Kernel     │              │  Automation │
+    │  └──────┬──────┘              └──────┬───────┘              └──────┬──────┘
+    │         │                            │                             │
+    │         └─────────────────────────────┼─────────────────────────────┘
+    │                                       │
+    ▼                                       ▼
+Observation ◄──────────────────── EventStream.add_event(observation)
+    │
+    ▼
+AgentController 处理
+    │
+    ▼
+Agent.step() 决定下一步
+</code></pre><h3 id="102-dockerruntime-架构">10.2 DockerRuntime 架构<a hidden class="anchor" aria-hidden="true" href="#102-dockerruntime-架构">#</a></h3>
+<pre tabindex="0"><code>                    DockerRuntime
+                    ┌─────────────────────────────────────┐
+                    │                                     │
+                    │  ┌─────────────────────────────┐   │
+                    │  │     Port Allocation          │   │
+                    │  │  30000-39999 (API)           │   │
+                    │  │  40000-49999 (VSCode)       │   │
+                    │  │  50000-59999 (App)          │   │
+                    │  └─────────────────────────────┘   │
+                    │                                     │
+                    │  ┌─────────────────────────────┐   │
+                    │  │   ActionExecutionClient     │   │
+                    │  │   (HTTP Client)             │   │
+                    │  └──────────────┬──────────────┘   │
+                    └─────────────────┼───────────────────┘
+                                        │
+                    ┌───────────────────┴───────────────────┐
+                    │           Docker Network              │
+                    └───────────────────┬───────────────────┘
+                                        │
+                    ┌───────────────────┴───────────────────┐
+                    │              Container                  │
+                    │  ┌─────────────────────────────────┐   │
+                    │  │  ActionExecutionServer (FastAPI)│   │
+                    │  └──────────────┬──────────────────┘   │
+                    │                 │                       │
+                    │  ┌──────────────┴──────────────┐        │
+                    │  │      ActionExecutor         │        │
+                    │  ├─────────────────────────────┤        │
+                    │  │ BashSession (TMUX)         │        │
+                    │  │ JupyterPlugin (Kernel)      │        │
+                    │  │ BrowserEnv (BrowserGym)     │        │
+                    │  │ OHEditor                   │        │
+                    │  └─────────────────────────────┘        │
+                    │                                        │
+                    │  ┌─────────────────────────────────┐   │
+                    │  │     Volume Mounts               │   │
+                    │  │  - /workspace (代码)            │   │
+                    │  │  - /openhands (工具)           │   │
+                    │  └─────────────────────────────────┘   │
+                    └────────────────────────────────────────┘
+</code></pre><h3 id="103-预热池架构">10.3 预热池架构<a hidden class="anchor" aria-hidden="true" href="#103-预热池架构">#</a></h3>
+<pre tabindex="0"><code>                    ┌──────────────────────────────────────┐
+                    │           LocalRuntime                │
+                    │                                      │
+                    │  ┌────────────────────────────────┐  │
+                    │  │       Warm Pool Manager         │  │
+                    │  │                                │  │
+                    │  │  _WARM_SERVERS: [               │  │
+                    │  │    ServerInfo(pid=1234, port=30000),│
+                    │  │    ServerInfo(pid=5678, port=30001),│
+                    │  │  ]                              │  │
+                    │  └────────────────────────────────┘  │
+                    │              │                         │
+                    │              │ 取出一个                  │
+                    │              ▼                         │
+                    │  ┌────────────────────────────────┐  │
+                    │  │    Request → Runtime           │  │
+                    │  └────────────────────────────────┘  │
+                    │              │                         │
+                    │              │ 用完归还                 │
+                    │              ▼                         │
+                    │  ┌────────────────────────────────┐  │
+                    │  │    Warm Pool Manager          │  │
+                    │  │    (检查是否需要补充)          │  │
+                    │  └────────────────────────────────┘  │
+                    └──────────────────────────────────────┘
+</code></pre><hr>
+<h2 id="11-面试问题">11. 面试问题<a hidden class="anchor" aria-hidden="true" href="#11-面试问题">#</a></h2>
+<h3 id="q1-runtime-在-openhands-中扮演什么角色">Q1: Runtime 在 OpenHands 中扮演什么角色？<a hidden class="anchor" aria-hidden="true" href="#q1-runtime-在-openhands-中扮演什么角色">#</a></h3>
+<p><strong>参考答案</strong>：</p>
+<blockquote>
+<p>Runtime 是 OpenHands 的&quot;手脚&quot;，负责<strong>在实际环境中执行 Action</strong>。</p>
+<p><strong>核心职责</strong>：</p>
+<ol>
+<li><strong>环境隔离</strong>：在 Docker/K8s 等隔离环境中执行</li>
+<li><strong>动作执行</strong>：Bash 命令、Python 代码、文件操作、浏览器</li>
+<li><strong>结果返回</strong>：将执行结果作为 Observation 返回</li>
+</ol>
+<p><strong>与 AgentController 的关系</strong>：</p>
+<ul>
+<li>Controller 驱动主循环，决定做什么</li>
+<li>Runtime 执行动作，报告结果</li>
+<li>两者通过 EventStream 通信</li>
+</ul>
+</blockquote>
+<hr>
+<h3 id="q2-dockerruntime-是如何实现的">Q2: DockerRuntime 是如何实现的？<a hidden class="anchor" aria-hidden="true" href="#q2-dockerruntime-是如何实现的">#</a></h3>
+<p><strong>参考答案</strong>：</p>
+<blockquote>
+<p><strong>架构</strong>：</p>
+<ul>
+<li>DockerRuntime 继承 ActionExecutionClient</li>
+<li>通过 HTTP 与容器内的 ActionExecutionServer 通信</li>
+</ul>
+<p><strong>创建流程</strong>：</p>
+<ol>
+<li><strong>端口分配</strong>：带文件锁防止冲突</li>
+<li><strong>环境配置</strong>：设置 port、API key 等</li>
+<li><strong>卷挂载</strong>：
+<ul>
+<li>绑定挂载：主机路径直接映射</li>
+<li>Overlay 挂载：COW 机制</li>
+</ul>
+</li>
+<li><strong>容器创建</strong>：使用 docker-py 库</li>
+</ol>
+<p><strong>隔离机制</strong>：</p>
+<ul>
+<li>独立容器文件系统</li>
+<li>网络隔离（bridge 模式）</li>
+<li>资源限制（CPU、内存）</li>
+</ul>
+</blockquote>
+<hr>
+<h3 id="q3-什么是-actionexecutionserver它做什么">Q3: 什么是 ActionExecutionServer？它做什么？<a hidden class="anchor" aria-hidden="true" href="#q3-什么是-actionexecutionserver它做什么">#</a></h3>
+<p><strong>参考答案</strong>：</p>
+<blockquote>
+<p><strong>ActionExecutionServer</strong> 是运行在沙箱内的 HTTP 服务器。</p>
+<p><strong>API 端点</strong>：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>GET  <span style="color:#f92672">/</span>alive              <span style="color:#75715e"># 健康检查</span>
+</span></span><span style="display:flex;"><span>POST <span style="color:#f92672">/</span>execute_action     <span style="color:#75715e"># 执行动作</span>
+</span></span><span style="display:flex;"><span>POST <span style="color:#f92672">/</span>list_files        <span style="color:#75715e"># 列出文件</span>
+</span></span><span style="display:flex;"><span>POST <span style="color:#f92672">/</span>upload_file       <span style="color:#75715e"># 上传文件</span>
+</span></span><span style="display:flex;"><span>GET  <span style="color:#f92672">/</span>download_files    <span style="color:#75715e"># 下载文件</span>
+</span></span><span style="display:flex;"><span>POST <span style="color:#f92672">/</span>update_mcp_server <span style="color:#75715e"># 更新 MCP</span>
+</span></span></code></pre></div><p><strong>ActionExecutor</strong>：</p>
+<ul>
+<li>管理 BashSession（TMUX）</li>
+<li>管理 JupyterPlugin</li>
+<li>管理 BrowserEnv</li>
+<li>使用信号量保证单动作执行</li>
+</ul>
+</blockquote>
+<hr>
+<h3 id="q4-bash-命令是如何执行的">Q4: Bash 命令是如何执行的？<a hidden class="anchor" aria-hidden="true" href="#q4-bash-命令是如何执行的">#</a></h3>
+<p><strong>参考答案</strong>：</p>
+<blockquote>
+<p><strong>BashSession</strong> 使用 TMUX 实现：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">BashSession</span>:
+</span></span><span style="display:flex;"><span>    session <span style="color:#f92672">=</span> libtmux<span style="color:#f92672">.</span>Session()
+</span></span><span style="display:flex;"><span>    window <span style="color:#f92672">=</span> session<span style="color:#f92672">.</span>new_window()
+</span></span><span style="display:flex;"><span>    pane <span style="color:#f92672">=</span> window<span style="color:#f92672">.</span>attached_pane
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">run_command</span>(self, cmd):
+</span></span><span style="display:flex;"><span>        pane<span style="color:#f92672">.</span>send_keys(cmd)
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e"># 轮询输出直到完成</span>
+</span></span></code></pre></div><p><strong>输出提取</strong>：</p>
+<ul>
+<li>注入特殊 PS1 提示符 <code>[POH]</code></li>
+<li>解析 exit_code、working_dir</li>
+</ul>
+<p><strong>超时处理</strong>：</p>
+<ul>
+<li>无变化超时：30 秒无输出</li>
+<li>硬超时：动作指定的超时</li>
+<li>Bash 会话忙：exit_code=-1 重试</li>
+</ul>
+</blockquote>
+<hr>
+<h3 id="q5-ipythonjupyter-是如何工作的">Q5: IPython/Jupyter 是如何工作的？<a hidden class="anchor" aria-hidden="true" href="#q5-ipythonjupyter-是如何工作的">#</a></h3>
+<p><strong>参考答案</strong>：</p>
+<blockquote>
+<p><strong>架构</strong>：</p>
+<pre tabindex="0"><code>JupyterPlugin → JupyterKernelGateway → Kernel
+</code></pre><p><strong>通信</strong>：WebSocket 协议</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#75715e"># 发送</span>
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#39;header&#39;</span>: {<span style="color:#e6db74">&#39;msg_type&#39;</span>: <span style="color:#e6db74">&#39;execute_request&#39;</span>},
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#39;content&#39;</span>: {<span style="color:#e6db74">&#39;code&#39;</span>: <span style="color:#e6db74">&#39;print(&#34;hello&#34;)&#39;</span>}
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 接收</span>
+</span></span><span style="display:flex;"><span>{
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#39;header&#39;</span>: {<span style="color:#e6db74">&#39;msg_type&#39;</span>: <span style="color:#e6db74">&#39;execute_result&#39;</span>},
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#39;content&#39;</span>: {<span style="color:#e6db74">&#39;data&#39;</span>: <span style="color:#e6db74">&#39;hello&#39;</span>}
+</span></span><span style="display:flex;"><span>}
+</span></span></code></pre></div><p><strong>支持</strong>：</p>
+<ul>
+<li>stdout/stderr 输出</li>
+<li>图像输出（base64）</li>
+<li>Rich 输出</li>
+</ul>
+</blockquote>
+<hr>
+<h3 id="q6-什么是预热池为什么要用它">Q6: 什么是预热池？为什么要用它？<a hidden class="anchor" aria-hidden="true" href="#q6-什么是预热池为什么要用它">#</a></h3>
+<p><strong>参考答案</strong>：</p>
+<blockquote>
+<p><strong>预热池</strong>是预先启动的 ActionExecutionServer 池。</p>
+<p><strong>问题</strong>：首次执行需要启动容器（几十秒），太慢</p>
+<p><strong>解决方案</strong>：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>_WARM_SERVERS <span style="color:#f92672">=</span> []  <span style="color:#75715e"># 预热服务器列表</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 启动时创建</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">for</span> _ <span style="color:#f92672">in</span> range(INITIAL_NUM_WARM_SERVERS):
+</span></span><span style="display:flex;"><span>    server <span style="color:#f92672">=</span> create_server()
+</span></span><span style="display:flex;"><span>    server<span style="color:#f92672">.</span>start()
+</span></span><span style="display:flex;"><span>    _WARM_SERVERS<span style="color:#f92672">.</span>append(server)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 使用时取出</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">if</span> _WARM_SERVERS:
+</span></span><span style="display:flex;"><span>    server <span style="color:#f92672">=</span> _WARM_SERVERS<span style="color:#f92672">.</span>pop()
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">else</span>:
+</span></span><span style="display:flex;"><span>    server <span style="color:#f92672">=</span> create_server()  <span style="color:#75715e"># 没有预热服务器时创建新的</span>
+</span></span></code></pre></div><p><strong>优势</strong>：任务立即开始，无需等待容器启动</p>
+</blockquote>
+<hr>
+<h3 id="q7-localruntime-和-dockerruntime-的区别是什么">Q7: LocalRuntime 和 DockerRuntime 的区别是什么？<a hidden class="anchor" aria-hidden="true" href="#q7-localruntime-和-dockerruntime-的区别是什么">#</a></h3>
+<p><strong>参考答案</strong>：</p>
+<blockquote>
+<table>
+  <thead>
+      <tr>
+          <th>维度</th>
+          <th>DockerRuntime</th>
+          <th>LocalRuntime</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><strong>隔离</strong></td>
+          <td>容器级隔离</td>
+          <td>无隔离</td>
+      </tr>
+      <tr>
+          <td><strong>启动延迟</strong></td>
+          <td>几十秒</td>
+          <td>几乎即时</td>
+      </tr>
+      <tr>
+          <td><strong>资源</strong></td>
+          <td>需 Docker 守护进程</td>
+          <td>直接在主机</td>
+      </tr>
+      <tr>
+          <td><strong>安全性</strong></td>
+          <td>高</td>
+          <td>低（命令直接运行）</td>
+      </tr>
+      <tr>
+          <td><strong>一致性</strong></td>
+          <td>环境固定</td>
+          <td>依赖主机环境</td>
+      </tr>
+      <tr>
+          <td><strong>适用</strong></td>
+          <td>生产/信任边界</td>
+          <td>开发/测试</td>
+      </tr>
+  </tbody>
+</table>
+<p><strong>LocalRuntime 警告</strong>：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>logger<span style="color:#f92672">.</span>warning(<span style="color:#e6db74">&#39;NO SANDBOX IS USED. This is an experimental feature...&#39;</span>)
+</span></span></code></pre></div></blockquote>
+<hr>
+<h3 id="q8-容器是如何启动和管理的">Q8: 容器是如何启动和管理的？<a hidden class="anchor" aria-hidden="true" href="#q8-容器是如何启动和管理的">#</a></h3>
+<p><strong>参考答案</strong>：</p>
+<blockquote>
+<p><strong>启动流程</strong>：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#75715e"># 1. 创建容器</span>
+</span></span><span style="display:flex;"><span>container <span style="color:#f92672">=</span> docker_client<span style="color:#f92672">.</span>containers<span style="color:#f92672">.</span>run(
+</span></span><span style="display:flex;"><span>    image<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;openhands/runtime:latest&#39;</span>,
+</span></span><span style="display:flex;"><span>    command<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;python -m openhands.runtime.action_execution_server&#39;</span>,
+</span></span><span style="display:flex;"><span>    volumes<span style="color:#f92672">=</span>{<span style="color:#e6db74">&#39;/workspace&#39;</span>: {<span style="color:#e6db74">&#39;bind&#39;</span>: <span style="color:#e6db74">&#39;/workspace&#39;</span>, <span style="color:#e6db74">&#39;mode&#39;</span>: <span style="color:#e6db74">&#39;rw&#39;</span>}},
+</span></span><span style="display:flex;"><span>    ports<span style="color:#f92672">=</span>{<span style="color:#e6db74">&#39;30000/tcp&#39;</span>: <span style="color:#ae81ff">30000</span>}
+</span></span><span style="display:flex;"><span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 2. 等待就绪</span>
+</span></span><span style="display:flex;"><span>container<span style="color:#f92672">.</span>start()
+</span></span><span style="display:flex;"><span>time<span style="color:#f92672">.</span>sleep(<span style="color:#ae81ff">5</span>)  <span style="color:#75715e"># 或健康检查</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 3. 停止容器</span>
+</span></span><span style="display:flex;"><span>container<span style="color:#f92672">.</span>stop()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 4. 清理</span>
+</span></span><span style="display:flex;"><span>container<span style="color:#f92672">.</span>remove()
+</span></span></code></pre></div><p><strong>生命周期</strong>：</p>
+<ul>
+<li>创建 → 启动 → 就绪 → 执行 → 停止 → 删除</li>
+</ul>
+</blockquote>
+<hr>
+<h3 id="q9-安全机制有哪些">Q9: 安全机制有哪些？<a hidden class="anchor" aria-hidden="true" href="#q9-安全机制有哪些">#</a></h3>
+<p><strong>参考答案</strong>：</p>
+<blockquote>
+<p><strong>隔离安全</strong>：</p>
+<ul>
+<li>Docker 容器隔离</li>
+<li>K8s Pod 隔离</li>
+<li>网络隔离</li>
+</ul>
+<p><strong>资源限制</strong>：</p>
+<ul>
+<li>内存限制</li>
+<li>CPU 限制</li>
+<li>内存监控（MemoryMonitor）</li>
+</ul>
+<p><strong>认证</strong>：</p>
+<ul>
+<li>Session API Key 验证</li>
+<li>所有请求头携带 <code>X-Session-API-Key</code></li>
+</ul>
+<p><strong>操作安全</strong>：</p>
+<ul>
+<li>高风险动作需用户确认（confirmation_mode）</li>
+<li>SecurityAnalyzer 分析动作风险</li>
+<li>hidden=True 的敏感操作不记录</li>
+</ul>
+</blockquote>
+<hr>
+<h3 id="q10-如何扩展新的-runtime-实现">Q10: 如何扩展新的 Runtime 实现？<a hidden class="anchor" aria-hidden="true" href="#q10-如何扩展新的-runtime-实现">#</a></h3>
+<p><strong>参考答案</strong>：</p>
+<blockquote>
+<p><strong>步骤</strong>：</p>
+<ol>
+<li><strong>继承 Runtime 基类</strong></li>
+</ol>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">MyRuntime</span>(Runtime):
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">async</span> <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">connect</span>(self):
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e"># 连接逻辑</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">pass</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">run</span>(self, action: CmdRunAction):
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e"># 命令执行</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">pass</span>
+</span></span></code></pre></div><ol start="2">
+<li><strong>实现抽象方法</strong></li>
+</ol>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">read</span>(self, action: FileReadAction):
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">...</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">write</span>(self, action: FileWriteAction):
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">...</span>
+</span></span></code></pre></div><ol start="3">
+<li><strong>注册到 Builder</strong></li>
+</ol>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#75715e"># runtime/builder/base.py</span>
+</span></span><span style="display:flex;"><span>RuntimeBuilder<span style="color:#f92672">.</span>register(<span style="color:#e6db74">&#39;my_runtime&#39;</span>, MyRuntimeBuilder)
+</span></span></code></pre></div></blockquote>
+<hr>
+<h3 id="q11-文件编辑是如何实现的">Q11: 文件编辑是如何实现的？<a hidden class="anchor" aria-hidden="true" href="#q11-文件编辑是如何实现的">#</a></h3>
+<p><strong>参考答案</strong>：</p>
+<blockquote>
+<p><strong>OHEditor</strong> 提供高级文件编辑：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>editor <span style="color:#f92672">=</span> OHEditor()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 替换编辑</span>
+</span></span><span style="display:flex;"><span>editor<span style="color:#f92672">.</span>edit_file(
+</span></span><span style="display:flex;"><span>    path<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;src/main.py&#39;</span>,
+</span></span><span style="display:flex;"><span>    old_str<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;def hello():&#39;</span>,
+</span></span><span style="display:flex;"><span>    new_str<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;def hello_world():&#39;</span>,
+</span></span><span style="display:flex;"><span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 插入编辑</span>
+</span></span><span style="display:flex;"><span>editor<span style="color:#f92672">.</span>edit_file(
+</span></span><span style="display:flex;"><span>    path<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;src/main.py&#39;</span>,
+</span></span><span style="display:flex;"><span>    command<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;insert&#39;</span>,
+</span></span><span style="display:flex;"><span>    new_str<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;    return &#34;hello&#34;&#39;</span>,
+</span></span><span style="display:flex;"><span>    after_line<span style="color:#f92672">=</span><span style="color:#ae81ff">10</span>,
+</span></span><span style="display:flex;"><span>)
+</span></span></code></pre></div><p><strong>Diff 生成</strong>：</p>
+<ul>
+<li>使用 <code>openhands_aci.utils.diff</code></li>
+<li>生成 unified diff 格式</li>
+<li>可用于预览和回滚</li>
+</ul>
+</blockquote>
+<hr>
+<h3 id="q12-浏览器自动化是如何工作的">Q12: 浏览器自动化是如何工作的？<a hidden class="anchor" aria-hidden="true" href="#q12-浏览器自动化是如何工作的">#</a></h3>
+<p><strong>参考答案</strong>：</p>
+<blockquote>
+<p><strong>BrowserGym</strong> 是 OpenAI 开发的浏览器自动化框架：</p>
+<p><strong>架构</strong>：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>BrowserEnv
+</span></span><span style="display:flex;"><span>    <span style="color:#960050;background-color:#1e0010">│</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#960050;background-color:#1e0010">├──►</span> Browser Process (multiprocessing)
+</span></span><span style="display:flex;"><span>    <span style="color:#960050;background-color:#1e0010">│</span>          <span style="color:#960050;background-color:#1e0010">│</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#960050;background-color:#1e0010">│</span>          <span style="color:#960050;background-color:#1e0010">├──►</span> BrowserGym Environment
+</span></span><span style="display:flex;"><span>    <span style="color:#960050;background-color:#1e0010">│</span>          <span style="color:#960050;background-color:#1e0010">│</span>          <span style="color:#960050;background-color:#1e0010">│</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#960050;background-color:#1e0010">│</span>          <span style="color:#960050;background-color:#1e0010">│</span>          <span style="color:#960050;background-color:#1e0010">├──►</span> Chromium
+</span></span><span style="display:flex;"><span>    <span style="color:#960050;background-color:#1e0010">│</span>          <span style="color:#960050;background-color:#1e0010">│</span>          <span style="color:#960050;background-color:#1e0010">│</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#960050;background-color:#1e0010">│</span>          <span style="color:#960050;background-color:#1e0010">│</span>          <span style="color:#960050;background-color:#1e0010">└──►</span> accessibility_tree
+</span></span><span style="display:flex;"><span>    <span style="color:#960050;background-color:#1e0010">│</span>          <span style="color:#960050;background-color:#1e0010">│</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#960050;background-color:#1e0010">│</span>          <span style="color:#960050;background-color:#1e0010">└──►</span> Pipe (IPC)
+</span></span><span style="display:flex;"><span>    <span style="color:#960050;background-color:#1e0010">│</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#960050;background-color:#1e0010">└──►</span> ActionExecutor
+</span></span></code></pre></div><p><strong>动作类型</strong>：</p>
+<ul>
+<li><code>goto(url)</code>：导航</li>
+<li><code>click(selector)</code>：点击</li>
+<li><code>type(selector, text)</code>：输入</li>
+<li><code>noop()</code>：无操作（等待页面稳定）</li>
+</ul>
+<p><strong>观察</strong>：</p>
+<ul>
+<li>DOM 树</li>
+<li>Accessibility tree（无障碍树）</li>
+<li>截图</li>
+</ul>
+</blockquote>
+
+
+  </div>
+
+  <footer class="post-footer">
+    <ul class="post-tags">
+    </ul>
+  </footer>
+</article>
+    </main>
+    
+<footer class="footer">
+        <span>&copy; 2026 <a href="http://localhost:1313/">My New Hugo Project</a></span> · 
+
+    <span>
+        Powered by
+        <a href="https://gohugo.io/" rel="noopener noreferrer" target="_blank">Hugo</a> &
+        <a href="https://github.com/adityatelange/hugo-PaperMod/" rel="noopener" target="_blank">PaperMod</a>
+    </span>
+</footer>
+<a href="#top" aria-label="go to top" title="Go to Top (Alt + G)" class="top-link" id="top-link" accesskey="g">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 6" fill="currentColor">
+        <path d="M12 6H0l6-6z" />
+    </svg>
+</a>
+
+<script>
+    let menu = document.getElementById('menu');
+    if (menu) {
+        
+        const scrollPosition = localStorage.getItem("menu-scroll-position");
+        if (scrollPosition) {
+            menu.scrollLeft = parseInt(scrollPosition, 10);
+        }
+        
+        menu.onscroll = function () {
+            localStorage.setItem("menu-scroll-position", menu.scrollLeft);
+        }
+    }
+
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener("click", function (e) {
+            e.preventDefault();
+            var id = this.getAttribute("href").substr(1);
+            if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView({
+                    behavior: "smooth"
+                });
+            } else {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView();
+            }
+            if (id === "top") {
+                history.replaceState(null, null, " ");
+            } else {
+                history.pushState(null, null, `#${id}`);
+            }
+        });
+    });
+
+</script>
+<script>
+    var mybutton = document.getElementById("top-link");
+    window.onscroll = function () {
+        if (document.body.scrollTop > 800 || document.documentElement.scrollTop > 800) {
+            mybutton.style.visibility = "visible";
+            mybutton.style.opacity = "1";
+        } else {
+            mybutton.style.visibility = "hidden";
+            mybutton.style.opacity = "0";
+        }
+    };
+
+</script>
+<script>
+    document.getElementById("theme-toggle").addEventListener("click", () => {
+        const html = document.querySelector("html");
+        if (html.dataset.theme === "dark") {
+            html.dataset.theme = 'light';
+            localStorage.setItem("pref-theme", 'light');
+        } else {
+            html.dataset.theme = 'dark';
+            localStorage.setItem("pref-theme", 'dark');
+        }
+    })
+
+</script>
+</body>
+
+</html>

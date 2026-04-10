@@ -1,0 +1,1135 @@
+<!DOCTYPE html>
+<html lang="en" dir="auto" data-theme="auto">
+
+<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script><meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<meta name="robots" content="noindex, nofollow">
+<title>Openhand_controller | My New Hugo Project</title>
+<meta name="keywords" content="">
+<meta name="description" content="目录
+
+概述
+AgentController 核心结构
+状态管理
+主循环实现
+事件流集成
+委托/多智能体系统
+循环检测与错误处理
+配置系统
+架构流程图
+面试问题
+
+
+1. 概述
+1.1 什么是 AgentController
+AgentController 是 OpenHands 的&quot;引擎&quot;，负责：
+
+驱动智能体的主循环
+管理任务状态
+协调各组件通信
+处理异常和循环检测
+
+文件: /home/gdw/tutorial/OpenHands/openhands/controller/agent_controller.py
+1.2 核心职责
+AgentController
+    │
+    ├── 主循环驱动 (_step)
+    ├── 状态管理 (StateTracker)
+    ├── 事件路由 (EventStream)
+    ├── 委托管理 (Delegate)
+    ├── 循环检测 (StuckDetector)
+    ├── 安全分析 (SecurityAnalyzer)
+    └── 配置控制 (ControlFlags)
+
+2. AgentController 核心结构
+2.1 类定义
+class AgentController:
+    id: str
+    agent: Agent
+    max_iterations: int
+    event_stream: EventStream
+    state: State
+    confirmation_mode: bool
+    agent_to_llm_config: dict[str, LLMConfig]
+    agent_configs: dict[str, AgentConfig]
+    parent: &#39;AgentController | None&#39; = None
+    delegate: &#39;AgentController | None&#39; = None
+    _pending_action_info: tuple[Action, float] | None = None
+    _closed: bool = False
+2.2 初始化流程
+def __init__(
+    self,
+    agent: Agent,
+    event_stream: EventStream,
+    conversation_stats: ConversationStats,
+    iteration_delta: int,  # 最大迭代次数
+    budget_per_task_delta: float | None = None,  # 最大预算
+    agent_to_llm_config: dict[str, LLMConfig] | None = None,
+    agent_configs: dict[str, AgentConfig] | None = None,
+    sid: str | None = None,
+    file_store: FileStore | None = None,
+    user_id: str | None = None,
+    confirmation_mode: bool = False,
+    initial_state: State | None = None,
+    is_delegate: bool = False,
+    headless_mode: bool = True,
+    status_callback: Callable | None = None,
+    replay_events: list[Event] | None = None,
+    security_analyzer: &#39;SecurityAnalyzer | None&#39; = None,
+):
+初始化步骤：">
+<meta name="author" content="">
+<link rel="canonical" href="http://localhost:1313/posts/openhand_controller/">
+<link crossorigin="anonymous" href="/assets/css/stylesheet.199042e659bc7245f5609d333d6c044eb554a0640849bb874e1dff8eb0f57209.css" integrity="sha256-GZBC5lm8ckX1YJ0zPWwETrVUoGQISbuHTh3/jrD1cgk=" rel="preload stylesheet" as="style">
+<link rel="icon" href="http://localhost:1313/favicon.ico">
+<link rel="icon" type="image/png" sizes="16x16" href="http://localhost:1313/favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="http://localhost:1313/favicon-32x32.png">
+<link rel="apple-touch-icon" href="http://localhost:1313/apple-touch-icon.png">
+<link rel="mask-icon" href="http://localhost:1313/safari-pinned-tab.svg">
+<meta name="theme-color" content="#2e2e33">
+<meta name="msapplication-TileColor" content="#2e2e33">
+<link rel="alternate" hreflang="en" href="http://localhost:1313/posts/openhand_controller/">
+<noscript>
+    <style>
+        #theme-toggle,
+        .top-link {
+            display: none;
+        }
+
+    </style>
+    <style>
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --theme: rgb(29, 30, 32);
+                --entry: rgb(46, 46, 51);
+                --primary: rgb(218, 218, 219);
+                --secondary: rgb(155, 156, 157);
+                --tertiary: rgb(65, 66, 68);
+                --content: rgb(196, 196, 197);
+                --code-block-bg: rgb(46, 46, 51);
+                --code-bg: rgb(55, 56, 62);
+                --border: rgb(51, 51, 51);
+                color-scheme: dark;
+            }
+
+            .list {
+                background: var(--theme);
+            }
+
+            .toc {
+                background: var(--entry);
+            }
+        }
+
+        @media (prefers-color-scheme: light) {
+            .list::-webkit-scrollbar-thumb {
+                border-color: var(--code-bg);
+            }
+        }
+
+    </style>
+</noscript>
+<script>
+    if (localStorage.getItem("pref-theme") === "dark") {
+        document.querySelector("html").dataset.theme = 'dark';
+    } else if (localStorage.getItem("pref-theme") === "light") {
+       document.querySelector("html").dataset.theme = 'light';
+    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.querySelector("html").dataset.theme = 'dark';
+    } else {
+        document.querySelector("html").dataset.theme = 'light';
+    }
+
+</script>
+</head>
+<body id="top">
+    <header class="header">
+    <nav class="nav">
+        <div class="logo">
+            <a href="http://localhost:1313/" accesskey="h" title="My New Hugo Project (Alt + H)">My New Hugo Project</a>
+            <div class="logo-switches">
+                <button id="theme-toggle" accesskey="t" title="(Alt + T)" aria-label="Toggle theme">
+                    <svg id="moon" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                    <svg id="sun" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <ul id="menu">
+        </ul>
+    </nav>
+</header>
+<main class="main">
+
+<article class="post-single">
+  <header class="post-header">
+    
+    <h1 class="post-title entry-hint-parent">
+      Openhand_controller
+    </h1>
+    <div class="post-meta"><span title='2026-04-10 09:51:58 +0800 CST'>April 10, 2026</span>
+
+</div>
+  </header> 
+  <div class="post-content"><h2 id="目录">目录<a hidden class="anchor" aria-hidden="true" href="#目录">#</a></h2>
+<ol>
+<li><a href="#1-%E6%A6%82%E8%BF%B0">概述</a></li>
+<li><a href="#2-agentcontroller-%E6%A0%B8%E5%BF%83%E7%BB%93%E6%9E%84">AgentController 核心结构</a></li>
+<li><a href="#3-%E7%8A%B6%E6%80%81%E7%AE%A1%E7%90%86">状态管理</a></li>
+<li><a href="#4-%E4%B8%BB%E5%BE%AA%E7%8E%AF%E5%AE%9E%E7%8E%B0">主循环实现</a></li>
+<li><a href="#5-%E4%BA%8B%E4%BB%B6%E6%B5%81%E9%9B%86%E6%88%90">事件流集成</a></li>
+<li><a href="#6-%E5%A7%94%E6%89%98%E5%A4%9A%E6%99%BA%E8%83%BD%E4%BD%93%E7%B3%BB%E7%BB%9F">委托/多智能体系统</a></li>
+<li><a href="#7-%E5%BE%AA%E7%8E%AF%E6%A3%80%E6%B5%8B%E4%B8%8E%E9%94%99%E8%AF%AF%E5%A4%84%E7%90%86">循环检测与错误处理</a></li>
+<li><a href="#8-%E9%85%8D%E7%BD%AE%E7%B3%BB%E7%BB%9F">配置系统</a></li>
+<li><a href="#9-%E6%9E%B6%E6%9E%84%E6%B5%81%E7%A8%8B%E5%9B%BE">架构流程图</a></li>
+<li><a href="#10-%E9%9D%A2%E8%AF%95%E9%97%AE%E9%A2%98">面试问题</a></li>
+</ol>
+<hr>
+<h2 id="1-概述">1. 概述<a hidden class="anchor" aria-hidden="true" href="#1-概述">#</a></h2>
+<h3 id="11-什么是-agentcontroller">1.1 什么是 AgentController<a hidden class="anchor" aria-hidden="true" href="#11-什么是-agentcontroller">#</a></h3>
+<p><strong>AgentController</strong> 是 OpenHands 的&quot;引擎&quot;，负责：</p>
+<ul>
+<li>驱动智能体的主循环</li>
+<li>管理任务状态</li>
+<li>协调各组件通信</li>
+<li>处理异常和循环检测</li>
+</ul>
+<p><strong>文件</strong>: <code>/home/gdw/tutorial/OpenHands/openhands/controller/agent_controller.py</code></p>
+<h3 id="12-核心职责">1.2 核心职责<a hidden class="anchor" aria-hidden="true" href="#12-核心职责">#</a></h3>
+<pre tabindex="0"><code>AgentController
+    │
+    ├── 主循环驱动 (_step)
+    ├── 状态管理 (StateTracker)
+    ├── 事件路由 (EventStream)
+    ├── 委托管理 (Delegate)
+    ├── 循环检测 (StuckDetector)
+    ├── 安全分析 (SecurityAnalyzer)
+    └── 配置控制 (ControlFlags)
+</code></pre><hr>
+<h2 id="2-agentcontroller-核心结构">2. AgentController 核心结构<a hidden class="anchor" aria-hidden="true" href="#2-agentcontroller-核心结构">#</a></h2>
+<h3 id="21-类定义">2.1 类定义<a hidden class="anchor" aria-hidden="true" href="#21-类定义">#</a></h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">AgentController</span>:
+</span></span><span style="display:flex;"><span>    id: str
+</span></span><span style="display:flex;"><span>    agent: Agent
+</span></span><span style="display:flex;"><span>    max_iterations: int
+</span></span><span style="display:flex;"><span>    event_stream: EventStream
+</span></span><span style="display:flex;"><span>    state: State
+</span></span><span style="display:flex;"><span>    confirmation_mode: bool
+</span></span><span style="display:flex;"><span>    agent_to_llm_config: dict[str, LLMConfig]
+</span></span><span style="display:flex;"><span>    agent_configs: dict[str, AgentConfig]
+</span></span><span style="display:flex;"><span>    parent: <span style="color:#e6db74">&#39;AgentController | None&#39;</span> <span style="color:#f92672">=</span> <span style="color:#66d9ef">None</span>
+</span></span><span style="display:flex;"><span>    delegate: <span style="color:#e6db74">&#39;AgentController | None&#39;</span> <span style="color:#f92672">=</span> <span style="color:#66d9ef">None</span>
+</span></span><span style="display:flex;"><span>    _pending_action_info: tuple[Action, float] <span style="color:#f92672">|</span> <span style="color:#66d9ef">None</span> <span style="color:#f92672">=</span> <span style="color:#66d9ef">None</span>
+</span></span><span style="display:flex;"><span>    _closed: bool <span style="color:#f92672">=</span> <span style="color:#66d9ef">False</span>
+</span></span></code></pre></div><h3 id="22-初始化流程">2.2 初始化流程<a hidden class="anchor" aria-hidden="true" href="#22-初始化流程">#</a></h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">__init__</span>(
+</span></span><span style="display:flex;"><span>    self,
+</span></span><span style="display:flex;"><span>    agent: Agent,
+</span></span><span style="display:flex;"><span>    event_stream: EventStream,
+</span></span><span style="display:flex;"><span>    conversation_stats: ConversationStats,
+</span></span><span style="display:flex;"><span>    iteration_delta: int,  <span style="color:#75715e"># 最大迭代次数</span>
+</span></span><span style="display:flex;"><span>    budget_per_task_delta: float <span style="color:#f92672">|</span> <span style="color:#66d9ef">None</span> <span style="color:#f92672">=</span> <span style="color:#66d9ef">None</span>,  <span style="color:#75715e"># 最大预算</span>
+</span></span><span style="display:flex;"><span>    agent_to_llm_config: dict[str, LLMConfig] <span style="color:#f92672">|</span> <span style="color:#66d9ef">None</span> <span style="color:#f92672">=</span> <span style="color:#66d9ef">None</span>,
+</span></span><span style="display:flex;"><span>    agent_configs: dict[str, AgentConfig] <span style="color:#f92672">|</span> <span style="color:#66d9ef">None</span> <span style="color:#f92672">=</span> <span style="color:#66d9ef">None</span>,
+</span></span><span style="display:flex;"><span>    sid: str <span style="color:#f92672">|</span> <span style="color:#66d9ef">None</span> <span style="color:#f92672">=</span> <span style="color:#66d9ef">None</span>,
+</span></span><span style="display:flex;"><span>    file_store: FileStore <span style="color:#f92672">|</span> <span style="color:#66d9ef">None</span> <span style="color:#f92672">=</span> <span style="color:#66d9ef">None</span>,
+</span></span><span style="display:flex;"><span>    user_id: str <span style="color:#f92672">|</span> <span style="color:#66d9ef">None</span> <span style="color:#f92672">=</span> <span style="color:#66d9ef">None</span>,
+</span></span><span style="display:flex;"><span>    confirmation_mode: bool <span style="color:#f92672">=</span> <span style="color:#66d9ef">False</span>,
+</span></span><span style="display:flex;"><span>    initial_state: State <span style="color:#f92672">|</span> <span style="color:#66d9ef">None</span> <span style="color:#f92672">=</span> <span style="color:#66d9ef">None</span>,
+</span></span><span style="display:flex;"><span>    is_delegate: bool <span style="color:#f92672">=</span> <span style="color:#66d9ef">False</span>,
+</span></span><span style="display:flex;"><span>    headless_mode: bool <span style="color:#f92672">=</span> <span style="color:#66d9ef">True</span>,
+</span></span><span style="display:flex;"><span>    status_callback: Callable <span style="color:#f92672">|</span> <span style="color:#66d9ef">None</span> <span style="color:#f92672">=</span> <span style="color:#66d9ef">None</span>,
+</span></span><span style="display:flex;"><span>    replay_events: list[Event] <span style="color:#f92672">|</span> <span style="color:#66d9ef">None</span> <span style="color:#f92672">=</span> <span style="color:#66d9ef">None</span>,
+</span></span><span style="display:flex;"><span>    security_analyzer: <span style="color:#e6db74">&#39;SecurityAnalyzer | None&#39;</span> <span style="color:#f92672">=</span> <span style="color:#66d9ef">None</span>,
+</span></span><span style="display:flex;"><span>):
+</span></span></code></pre></div><p><strong>初始化步骤</strong>：</p>
+<ol>
+<li>设置 EventStream 并订阅</li>
+<li>创建 StateTracker</li>
+<li>初始化或恢复状态</li>
+<li>初始化 StuckDetector</li>
+<li>设置 ReplayManager</li>
+<li>添加系统消息</li>
+</ol>
+<hr>
+<h2 id="3-状态管理">3. 状态管理<a hidden class="anchor" aria-hidden="true" href="#3-状态管理">#</a></h2>
+<h3 id="31-state-类">3.1 State 类<a hidden class="anchor" aria-hidden="true" href="#31-state-类">#</a></h3>
+<p><strong>文件</strong>: <code>/home/gdw/tutorial/OpenHands/openhands/controller/state/state.py</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#a6e22e">@dataclass</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">State</span>:
+</span></span><span style="display:flex;"><span>    session_id: str <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;&#39;</span>
+</span></span><span style="display:flex;"><span>    user_id: str <span style="color:#f92672">|</span> <span style="color:#66d9ef">None</span> <span style="color:#f92672">=</span> <span style="color:#66d9ef">None</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># 迭代控制</span>
+</span></span><span style="display:flex;"><span>    iteration_flag: IterationControlFlag <span style="color:#f92672">=</span> field(default_factory<span style="color:#f92672">=</span><span style="color:#66d9ef">lambda</span>: IterationControlFlag(
+</span></span><span style="display:flex;"><span>        limit_increase_amount<span style="color:#f92672">=</span><span style="color:#ae81ff">100</span>, current_value<span style="color:#f92672">=</span><span style="color:#ae81ff">0</span>, max_value<span style="color:#f92672">=</span><span style="color:#ae81ff">100</span>
+</span></span><span style="display:flex;"><span>    ))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># 预算控制</span>
+</span></span><span style="display:flex;"><span>    budget_flag: BudgetControlFlag <span style="color:#f92672">|</span> <span style="color:#66d9ef">None</span> <span style="color:#f92672">=</span> <span style="color:#66d9ef">None</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># 确认模式</span>
+</span></span><span style="display:flex;"><span>    confirmation_mode: bool <span style="color:#f92672">=</span> <span style="color:#66d9ef">False</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># 历史记录</span>
+</span></span><span style="display:flex;"><span>    history: list[Event] <span style="color:#f92672">=</span> field(default_factory<span style="color:#f92672">=</span>list)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># 输入输出</span>
+</span></span><span style="display:flex;"><span>    inputs: dict <span style="color:#f92672">=</span> field(default_factory<span style="color:#f92672">=</span>dict)
+</span></span><span style="display:flex;"><span>    outputs: dict <span style="color:#f92672">=</span> field(default_factory<span style="color:#f92672">=</span>dict)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># 智能体状态</span>
+</span></span><span style="display:flex;"><span>    agent_state: AgentState <span style="color:#f92672">=</span> AgentState<span style="color:#f92672">.</span>LOADING
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># 委托层级</span>
+</span></span><span style="display:flex;"><span>    delegate_level: int <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># 指标</span>
+</span></span><span style="display:flex;"><span>    metrics: Metrics <span style="color:#f92672">=</span> field(default_factory<span style="color:#f92672">=</span>Metrics)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># 额外数据</span>
+</span></span><span style="display:flex;"><span>    extra_data: dict[str, Any] <span style="color:#f92672">=</span> field(default_factory<span style="color:#f92672">=</span>dict)
+</span></span><span style="display:flex;"><span>    last_error: str <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;&#39;</span>
+</span></span></code></pre></div><h3 id="32-statetracker">3.2 StateTracker<a hidden class="anchor" aria-hidden="true" href="#32-statetracker">#</a></h3>
+<p><strong>文件</strong>: <code>/home/gdw/tutorial/OpenHands/openhands/controller/state/state_tracker.py</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">StateTracker</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">__init__</span>(self, sid: str <span style="color:#f92672">|</span> <span style="color:#66d9ef">None</span>, file_store: FileStore <span style="color:#f92672">|</span> <span style="color:#66d9ef">None</span>, user_id: str <span style="color:#f92672">|</span> <span style="color:#66d9ef">None</span>):
+</span></span><span style="display:flex;"><span>        self<span style="color:#f92672">.</span>state: State
+</span></span><span style="display:flex;"><span>        self<span style="color:#f92672">.</span>agent_history_filter <span style="color:#f92672">=</span> EventFilter(
+</span></span><span style="display:flex;"><span>            exclude_types<span style="color:#f92672">=</span>(NullAction, NullObservation, ChangeAgentStateAction, AgentStateChangedObservation),
+</span></span><span style="display:flex;"><span>            exclude_hidden<span style="color:#f92672">=</span><span style="color:#66d9ef">True</span>,
+</span></span><span style="display:flex;"><span>        )
+</span></span></code></pre></div><p><strong>关键方法</strong>：</p>
+<ul>
+<li><code>set_initial_state()</code> - 初始化或恢复状态</li>
+<li><code>add_history()</code> - 添加事件到历史</li>
+<li><code>run_control_flags()</code> - 执行控制标志检查</li>
+<li><code>save_state()</code> - 持久化到文件存储</li>
+</ul>
+<h3 id="33-controlflags">3.3 ControlFlags<a hidden class="anchor" aria-hidden="true" href="#33-controlflags">#</a></h3>
+<p><strong>文件</strong>: <code>/home/gdw/tutorial/OpenHands/openhands/controller/state/control_flags.py</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#a6e22e">@dataclass</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">IterationControlFlag</span>(ControlFlag[int]):
+</span></span><span style="display:flex;"><span>    limit_increase_amount: int <span style="color:#f92672">=</span> <span style="color:#ae81ff">100</span>
+</span></span><span style="display:flex;"><span>    current_value: int <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>
+</span></span><span style="display:flex;"><span>    max_value: int <span style="color:#f92672">=</span> <span style="color:#ae81ff">100</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">reached_limit</span>(self) <span style="color:#f92672">-&gt;</span> bool:
+</span></span><span style="display:flex;"><span>        self<span style="color:#f92672">.</span>_hit_limit <span style="color:#f92672">=</span> self<span style="color:#f92672">.</span>current_value <span style="color:#f92672">&gt;=</span> self<span style="color:#f92672">.</span>max_value
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> self<span style="color:#f92672">.</span>_hit_limit
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">step</span>(self):
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> self<span style="color:#f92672">.</span>reached_limit():
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">raise</span> <span style="color:#a6e22e">RuntimeError</span>(<span style="color:#e6db74">f</span><span style="color:#e6db74">&#39;Agent reached maximum iteration...&#39;</span>)
+</span></span><span style="display:flex;"><span>        self<span style="color:#f92672">.</span>current_value <span style="color:#f92672">+=</span> <span style="color:#ae81ff">1</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">increase_limit</span>(self, headless_mode: bool) <span style="color:#f92672">-&gt;</span> <span style="color:#66d9ef">None</span>:
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> <span style="color:#f92672">not</span> headless_mode <span style="color:#f92672">and</span> self<span style="color:#f92672">.</span>_hit_limit:
+</span></span><span style="display:flex;"><span>            self<span style="color:#f92672">.</span>max_value <span style="color:#f92672">+=</span> self<span style="color:#f92672">.</span>limit_increase_amount
+</span></span><span style="display:flex;"><span>            self<span style="color:#f92672">.</span>_hit_limit <span style="color:#f92672">=</span> <span style="color:#66d9ef">False</span>
+</span></span></code></pre></div><hr>
+<h2 id="4-主循环实现">4. 主循环实现<a hidden class="anchor" aria-hidden="true" href="#4-主循环实现">#</a></h2>
+<h3 id="41-step-执行流程">4.1 Step 执行流程<a hidden class="anchor" aria-hidden="true" href="#41-step-执行流程">#</a></h3>
+<p><strong>文件</strong>: <code>/home/gdw/tutorial/OpenHands/openhands/controller/agent_controller.py</code> (line 863)</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">async</span> <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">_step</span>(self) <span style="color:#f92672">-&gt;</span> <span style="color:#66d9ef">None</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;&#34;&#34;执行父智能体或委托智能体的一步&#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># 1. 检查智能体状态 - 只在 RUNNING 时执行</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> self<span style="color:#f92672">.</span>get_agent_state() <span style="color:#f92672">!=</span> AgentState<span style="color:#f92672">.</span>RUNNING:
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># 2. 检查待处理动作</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> self<span style="color:#f92672">.</span>_pending_action:
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># 3. 记录当前步骤</span>
+</span></span><span style="display:flex;"><span>    self<span style="color:#f92672">.</span>log(<span style="color:#e6db74">&#39;debug&#39;</span>, <span style="color:#e6db74">f</span><span style="color:#e6db74">&#39;LEVEL </span><span style="color:#e6db74">{</span>self<span style="color:#f92672">.</span>state<span style="color:#f92672">.</span>delegate_level<span style="color:#e6db74">}</span><span style="color:#e6db74"> LOCAL STEP...&#39;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># 4. 同步预算标志与 LLM 成本</span>
+</span></span><span style="display:flex;"><span>    self<span style="color:#f92672">.</span>state_tracker<span style="color:#f92672">.</span>sync_budget_flag_with_metrics()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># 5. 检查是否卡住</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> self<span style="color:#f92672">.</span>agent<span style="color:#f92672">.</span>config<span style="color:#f92672">.</span>enable_stuck_detection <span style="color:#f92672">and</span> self<span style="color:#f92672">.</span>_is_stuck():
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">await</span> self<span style="color:#f92672">.</span>_react_to_exception(AgentStuckInLoopError(<span style="color:#e6db74">&#39;Agent got stuck in a loop&#39;</span>))
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># 6. 执行控制标志检查</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">try</span>:
+</span></span><span style="display:flex;"><span>        self<span style="color:#f92672">.</span>state_tracker<span style="color:#f92672">.</span>run_control_flags()
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">except</span> <span style="color:#a6e22e">Exception</span> <span style="color:#66d9ef">as</span> e:
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">await</span> self<span style="color:#f92672">.</span>_react_to_exception(e)
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># 7. 从智能体获取动作或重放</span>
+</span></span><span style="display:flex;"><span>    action: Action <span style="color:#f92672">=</span> NullAction()
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> self<span style="color:#f92672">.</span>_replay_manager<span style="color:#f92672">.</span>should_replay():
+</span></span><span style="display:flex;"><span>        action <span style="color:#f92672">=</span> self<span style="color:#f92672">.</span>_replay_manager<span style="color:#f92672">.</span>step()  <span style="color:#75715e"># 从轨迹重放</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">else</span>:
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">try</span>:
+</span></span><span style="display:flex;"><span>            action <span style="color:#f92672">=</span> self<span style="color:#f92672">.</span>agent<span style="color:#f92672">.</span>step(self<span style="color:#f92672">.</span>state)  <span style="color:#75715e"># 调用 LLM</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">except</span> ContextWindowExceededError:
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">if</span> self<span style="color:#f92672">.</span>agent<span style="color:#f92672">.</span>config<span style="color:#f92672">.</span>enable_history_truncation:
+</span></span><span style="display:flex;"><span>                self<span style="color:#f92672">.</span>event_stream<span style="color:#f92672">.</span>add_event(CondensationRequestAction(), EventSource<span style="color:#f92672">.</span>AGENT)
+</span></span><span style="display:flex;"><span>                <span style="color:#66d9ef">return</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">raise</span> LLMContextWindowExceedError()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># 8. 处理确认模式</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> action<span style="color:#f92672">.</span>runnable <span style="color:#f92672">and</span> self<span style="color:#f92672">.</span>state<span style="color:#f92672">.</span>confirmation_mode:
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">await</span> self<span style="color:#f92672">.</span>_handle_security_analyzer(action)
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e"># 根据安全风险设置确认状态...</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># 9. 添加动作到事件流</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> <span style="color:#f92672">not</span> isinstance(action, NullAction):
+</span></span><span style="display:flex;"><span>        self<span style="color:#f92672">.</span>event_stream<span style="color:#f92672">.</span>add_event(action, action<span style="color:#f92672">.</span>_source)
+</span></span></code></pre></div><h3 id="42-事件触发循环">4.2 事件触发循环<a hidden class="anchor" aria-hidden="true" href="#42-事件触发循环">#</a></h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">on_event</span>(self, event: Event) <span style="color:#f92672">-&gt;</span> <span style="color:#66d9ef">None</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;&#34;&#34;事件回调 - EventStream 通知&#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># 如果有活跃委托，转发事件</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> self<span style="color:#f92672">.</span>delegate <span style="color:#f92672">is</span> <span style="color:#f92672">not</span> <span style="color:#66d9ef">None</span>:
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> delegate_state <span style="color:#f92672">not</span> <span style="color:#f92672">in</span> (AgentState<span style="color:#f92672">.</span>FINISHED, AgentState<span style="color:#f92672">.</span>ERROR, AgentState<span style="color:#f92672">.</span>REJECTED):
+</span></span><span style="display:flex;"><span>            asyncio<span style="color:#f92672">.</span>get_event_loop()<span style="color:#f92672">.</span>run_until_complete(self<span style="color:#f92672">.</span>delegate<span style="color:#f92672">.</span>_on_event(event))
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">return</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">else</span>:
+</span></span><span style="display:flex;"><span>            self<span style="color:#f92672">.</span>end_delegate()
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">return</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    asyncio<span style="color:#f92672">.</span>get_event_loop()<span style="color:#f92672">.</span>run_until_complete(self<span style="color:#f92672">.</span>_on_event(event))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">async</span> <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">_on_event</span>(self, event: Event) <span style="color:#f92672">-&gt;</span> <span style="color:#66d9ef">None</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> hasattr(event, <span style="color:#e6db74">&#39;hidden&#39;</span>) <span style="color:#f92672">and</span> event<span style="color:#f92672">.</span>hidden:
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    self<span style="color:#f92672">.</span>state_tracker<span style="color:#f92672">.</span>add_history(event)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> isinstance(event, Action):
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">await</span> self<span style="color:#f92672">.</span>_handle_action(event)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">elif</span> isinstance(event, Observation):
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">await</span> self<span style="color:#f92672">.</span>_handle_observation(event)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    should_step <span style="color:#f92672">=</span> self<span style="color:#f92672">.</span>should_step(event)
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> should_step:
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">await</span> self<span style="color:#f92672">.</span>_step_with_exception_handling()
+</span></span></code></pre></div><h3 id="43-agentstate-状态机">4.3 AgentState 状态机<a hidden class="anchor" aria-hidden="true" href="#43-agentstate-状态机">#</a></h3>
+<pre tabindex="0"><code>LOADING
+   │
+   v
+AWAITING_USER_INPUT &lt;───────────────────&gt; RUNNING
+   │                                          │
+   │                                          v
+   │                              AWAITING_USER_CONFIRMATION
+   │                                          │
+   │                              USER_CONFIRMED/USER_REJECTED
+   │                                          │
+   +---------&gt; PAUSED &lt;───────────────────────┤
+   │              │
+   │              v
+   +------&gt; STOPPED/ERROR/FINISHED/REJECTED
+</code></pre><hr>
+<h2 id="5-事件流集成">5. 事件流集成<a hidden class="anchor" aria-hidden="true" href="#5-事件流集成">#</a></h2>
+<h3 id="51-订阅-eventstream">5.1 订阅 EventStream<a hidden class="anchor" aria-hidden="true" href="#51-订阅-eventstream">#</a></h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#75715e"># __init__ 中</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">if</span> <span style="color:#f92672">not</span> self<span style="color:#f92672">.</span>is_delegate:
+</span></span><span style="display:flex;"><span>    self<span style="color:#f92672">.</span>event_stream<span style="color:#f92672">.</span>subscribe(
+</span></span><span style="display:flex;"><span>        EventStreamSubscriber<span style="color:#f92672">.</span>AGENT_CONTROLLER, self<span style="color:#f92672">.</span>on_event, self<span style="color:#f92672">.</span>id
+</span></span><span style="display:flex;"><span>    )
+</span></span></code></pre></div><h3 id="52-eventstream-事件路由">5.2 EventStream 事件路由<a hidden class="anchor" aria-hidden="true" href="#52-eventstream-事件路由">#</a></h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">should_step</span>(self, event: Event) <span style="color:#f92672">-&gt;</span> bool:
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;&#34;&#34;判断事件是否应触发智能体步骤&#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># 有委托时不触发</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> self<span style="color:#f92672">.</span>delegate <span style="color:#f92672">is</span> <span style="color:#f92672">not</span> <span style="color:#66d9ef">None</span>:
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">False</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> isinstance(event, Action):
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> isinstance(event, MessageAction) <span style="color:#f92672">and</span> event<span style="color:#f92672">.</span>source <span style="color:#f92672">==</span> EventSource<span style="color:#f92672">.</span>USER:
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">True</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> isinstance(event, AgentDelegateAction):
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">True</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> isinstance(event, CondensationAction):
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">True</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">False</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> isinstance(event, Observation):
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> isinstance(event, NullObservation) <span style="color:#f92672">and</span> event<span style="color:#f92672">.</span>cause <span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">0</span>:
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">True</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> isinstance(event, AgentStateChangedObservation):
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">False</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">True</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">False</span>
+</span></span></code></pre></div><hr>
+<h2 id="6-委托多智能体系统">6. 委托/多智能体系统<a hidden class="anchor" aria-hidden="true" href="#6-委托多智能体系统">#</a></h2>
+<h3 id="61-启动委托">6.1 启动委托<a hidden class="anchor" aria-hidden="true" href="#61-启动委托">#</a></h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">async</span> <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">start_delegate</span>(self, action: AgentDelegateAction) <span style="color:#f92672">-&gt;</span> <span style="color:#66d9ef">None</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;&#34;&#34;启动委托智能体&#34;&#34;&#34;</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># 1. 创建被委托的智能体</span>
+</span></span><span style="display:flex;"><span>    agent_cls: type[Agent] <span style="color:#f92672">=</span> Agent<span style="color:#f92672">.</span>get_cls(action<span style="color:#f92672">.</span>agent)
+</span></span><span style="display:flex;"><span>    delegate_agent <span style="color:#f92672">=</span> agent_cls(config<span style="color:#f92672">=</span>agent_config, llm_registry<span style="color:#f92672">=</span>self<span style="color:#f92672">.</span>agent<span style="color:#f92672">.</span>llm_registry)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># 2. 创建共享状态的委托状态</span>
+</span></span><span style="display:flex;"><span>    state <span style="color:#f92672">=</span> State(
+</span></span><span style="display:flex;"><span>        session_id<span style="color:#f92672">=</span>self<span style="color:#f92672">.</span>id<span style="color:#f92672">.</span>removesuffix(<span style="color:#e6db74">&#39;-delegate&#39;</span>),
+</span></span><span style="display:flex;"><span>        iteration_flag<span style="color:#f92672">=</span>self<span style="color:#f92672">.</span>state<span style="color:#f92672">.</span>iteration_flag,      <span style="color:#75715e"># 共享！</span>
+</span></span><span style="display:flex;"><span>        budget_flag<span style="color:#f92672">=</span>self<span style="color:#f92672">.</span>state<span style="color:#f92672">.</span>budget_flag,            <span style="color:#75715e"># 共享！</span>
+</span></span><span style="display:flex;"><span>        delegate_level<span style="color:#f92672">=</span>self<span style="color:#f92672">.</span>state<span style="color:#f92672">.</span>delegate_level <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>,
+</span></span><span style="display:flex;"><span>        metrics<span style="color:#f92672">=</span>self<span style="color:#f92672">.</span>state<span style="color:#f92672">.</span>metrics,                    <span style="color:#75715e"># 共享！</span>
+</span></span><span style="display:flex;"><span>        start_id<span style="color:#f92672">=</span>self<span style="color:#f92672">.</span>event_stream<span style="color:#f92672">.</span>get_latest_event_id() <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>,
+</span></span><span style="display:flex;"><span>        parent_metrics_snapshot<span style="color:#f92672">=</span>self<span style="color:#f92672">.</span>state_tracker<span style="color:#f92672">.</span>get_metrics_snapshot(),
+</span></span><span style="display:flex;"><span>        parent_iteration<span style="color:#f92672">=</span>self<span style="color:#f92672">.</span>state<span style="color:#f92672">.</span>iteration_flag<span style="color:#f92672">.</span>current_value,
+</span></span><span style="display:flex;"><span>    )
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># 3. 创建委托控制器</span>
+</span></span><span style="display:flex;"><span>    self<span style="color:#f92672">.</span>delegate <span style="color:#f92672">=</span> AgentController(
+</span></span><span style="display:flex;"><span>        sid<span style="color:#f92672">=</span>self<span style="color:#f92672">.</span>id <span style="color:#f92672">+</span> <span style="color:#e6db74">&#39;-delegate&#39;</span>,
+</span></span><span style="display:flex;"><span>        agent<span style="color:#f92672">=</span>delegate_agent,
+</span></span><span style="display:flex;"><span>        event_stream<span style="color:#f92672">=</span>self<span style="color:#f92672">.</span>event_stream,  <span style="color:#75715e"># 共享事件流！</span>
+</span></span><span style="display:flex;"><span>        initial_state<span style="color:#f92672">=</span>state,
+</span></span><span style="display:flex;"><span>        is_delegate<span style="color:#f92672">=</span><span style="color:#66d9ef">True</span>,
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e"># ...</span>
+</span></span><span style="display:flex;"><span>    )
+</span></span></code></pre></div><h3 id="62-委托状态流转">6.2 委托状态流转<a hidden class="anchor" aria-hidden="true" href="#62-委托状态流转">#</a></h3>
+<pre tabindex="0"><code>Parent AgentController
+    │
+    ├── 发送 AgentDelegateAction
+    │
+    ▼
+Delegate AgentController (is_delegate=True)
+    │
+    ├── 处理子任务
+    ├── 共享 EventStream
+    └── 独立的状态机
+    │
+    ▼
+完成 → AgentDelegateObservation → Parent 继续
+</code></pre><h3 id="63-委托结束">6.3 委托结束<a hidden class="anchor" aria-hidden="true" href="#63-委托结束">#</a></h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">end_delegate</span>(self) <span style="color:#f92672">-&gt;</span> <span style="color:#66d9ef">None</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># 更新父级的迭代计数</span>
+</span></span><span style="display:flex;"><span>    self<span style="color:#f92672">.</span>state<span style="color:#f92672">.</span>iteration_flag<span style="color:#f92672">.</span>current_value <span style="color:#f92672">=</span> (
+</span></span><span style="display:flex;"><span>        self<span style="color:#f92672">.</span>delegate<span style="color:#f92672">.</span>state<span style="color:#f92672">.</span>iteration_flag<span style="color:#f92672">.</span>current_value
+</span></span><span style="display:flex;"><span>    )
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># 发送委托结果观察</span>
+</span></span><span style="display:flex;"><span>    obs <span style="color:#f92672">=</span> AgentDelegateObservation(outputs<span style="color:#f92672">=</span>delegate_outputs, content<span style="color:#f92672">=</span>content)
+</span></span><span style="display:flex;"><span>    self<span style="color:#f92672">.</span>event_stream<span style="color:#f92672">.</span>add_event(obs, EventSource<span style="color:#f92672">.</span>AGENT)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    self<span style="color:#f92672">.</span>delegate <span style="color:#f92672">=</span> <span style="color:#66d9ef">None</span>
+</span></span></code></pre></div><hr>
+<h2 id="7-循环检测与错误处理">7. 循环检测与错误处理<a hidden class="anchor" aria-hidden="true" href="#7-循环检测与错误处理">#</a></h2>
+<h3 id="71-stuckdetector">7.1 StuckDetector<a hidden class="anchor" aria-hidden="true" href="#71-stuckdetector">#</a></h3>
+<p><strong>文件</strong>: <code>/home/gdw/tutorial/OpenHands/openhands/controller/stuck.py</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">StuckDetector</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">is_stuck</span>(self, headless_mode: bool <span style="color:#f92672">=</span> <span style="color:#66d9ef">True</span>) <span style="color:#f92672">-&gt;</span> bool:
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e"># 过滤用户消息和空事件</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e"># 检查最近 4 个动作/观察的模式</span>
+</span></span></code></pre></div><p><strong>检测场景</strong>：</p>
+<table>
+  <thead>
+      <tr>
+          <th>场景</th>
+          <th>条件</th>
+          <th>处理</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>重复动作-观察</td>
+          <td>相同动作 4 次相同观察</td>
+          <td>恢复</td>
+      </tr>
+      <tr>
+          <td>重复动作-错误</td>
+          <td>相同动作 3 次错误观察</td>
+          <td>恢复</td>
+      </tr>
+      <tr>
+          <td>独白</td>
+          <td>相同 MessageAction 3 次无观察</td>
+          <td>恢复</td>
+      </tr>
+      <tr>
+          <td>动作-观察模式</td>
+          <td>交替模式重复</td>
+          <td>恢复</td>
+      </tr>
+      <tr>
+          <td>上下文窗口错误循环</td>
+          <td>10+ 重复压缩事件</td>
+          <td>报错</td>
+      </tr>
+  </tbody>
+</table>
+<h3 id="72-错误处理">7.2 错误处理<a hidden class="anchor" aria-hidden="true" href="#72-错误处理">#</a></h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">async</span> <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">_react_to_exception</span>(self, e: <span style="color:#a6e22e">Exception</span>) <span style="color:#f92672">-&gt;</span> <span style="color:#66d9ef">None</span>:
+</span></span><span style="display:flex;"><span>    self<span style="color:#f92672">.</span>state<span style="color:#f92672">.</span>last_error <span style="color:#f92672">=</span> <span style="color:#e6db74">f</span><span style="color:#e6db74">&#39;</span><span style="color:#e6db74">{</span>type(e)<span style="color:#f92672">.</span>__name__<span style="color:#e6db74">}</span><span style="color:#e6db74">: </span><span style="color:#e6db74">{</span>str(e)<span style="color:#e6db74">}</span><span style="color:#e6db74">&#39;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># 分类错误</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> isinstance(e, AuthError):
+</span></span><span style="display:flex;"><span>        status <span style="color:#f92672">=</span> RuntimeStatus<span style="color:#f92672">.</span>AUTH_ERROR
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">elif</span> isinstance(e, RateLimitError):
+</span></span><span style="display:flex;"><span>        status <span style="color:#f92672">=</span> RuntimeStatus<span style="color:#f92672">.</span>RATE_LIMIT_ERROR
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">elif</span> isinstance(e, ContentPolicyViolationError):
+</span></span><span style="display:flex;"><span>        status <span style="color:#f92672">=</span> RuntimeStatus<span style="color:#f92672">.</span>CONTENT_POLICY_ERROR
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">else</span>:
+</span></span><span style="display:flex;"><span>        status <span style="color:#f92672">=</span> RuntimeStatus<span style="color:#f92672">.</span>ERROR
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">await</span> self<span style="color:#f92672">.</span>set_agent_state_to(AgentState<span style="color:#f92672">.</span>ERROR)
+</span></span></code></pre></div><h3 id="73-异常恢复流程">7.3 异常恢复流程<a hidden class="anchor" aria-hidden="true" href="#73-异常恢复流程">#</a></h3>
+<pre tabindex="0"><code>异常发生
+    │
+    ▼
+_react_to_exception()
+    │
+    ├── 记录错误
+    ├── 分类异常类型
+    ├── 设置 AgentState = ERROR
+    │
+    ▼
+如果可恢复 → LoopRecoveryAction
+    │
+    ▼
+继续主循环
+</code></pre><hr>
+<h2 id="8-配置系统">8. 配置系统<a hidden class="anchor" aria-hidden="true" href="#8-配置系统">#</a></h2>
+<h3 id="81-agentconfig">8.1 AgentConfig<a hidden class="anchor" aria-hidden="true" href="#81-agentconfig">#</a></h3>
+<p><strong>文件</strong>: <code>/home/gdw/tutorial/OpenHands/openhands/core/config/agent_config.py</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">AgentConfig</span>(BaseModel):
+</span></span><span style="display:flex;"><span>    cli_mode: bool <span style="color:#f92672">=</span> Field(default<span style="color:#f92672">=</span><span style="color:#66d9ef">False</span>)
+</span></span><span style="display:flex;"><span>    enable_browsing: bool <span style="color:#f92672">=</span> Field(default<span style="color:#f92672">=</span><span style="color:#66d9ef">True</span>)
+</span></span><span style="display:flex;"><span>    enable_editor: bool <span style="color:#f92672">=</span> Field(default<span style="color:#f92672">=</span><span style="color:#66d9ef">True</span>)
+</span></span><span style="display:flex;"><span>    enable_jupyter: bool <span style="color:#f92672">=</span> Field(default<span style="color:#f92672">=</span><span style="color:#66d9ef">True</span>)
+</span></span><span style="display:flex;"><span>    enable_cmd: bool <span style="color:#f92672">=</span> Field(default<span style="color:#f92672">=</span><span style="color:#66d9ef">True</span>)
+</span></span><span style="display:flex;"><span>    enable_think: bool <span style="color:#f92672">=</span> Field(default<span style="color:#f92672">=</span><span style="color:#66d9ef">True</span>)
+</span></span><span style="display:flex;"><span>    enable_finish: bool <span style="color:#f92672">=</span> Field(default<span style="color:#f92672">=</span><span style="color:#66d9ef">True</span>)
+</span></span><span style="display:flex;"><span>    enable_history_truncation: bool <span style="color:#f92672">=</span> Field(default<span style="color:#f92672">=</span><span style="color:#66d9ef">True</span>)
+</span></span><span style="display:flex;"><span>    enable_stuck_detection: bool <span style="color:#f92672">=</span> Field(default<span style="color:#f92672">=</span><span style="color:#66d9ef">True</span>)
+</span></span><span style="display:flex;"><span>    enable_plan_mode: bool <span style="color:#f92672">=</span> Field(default<span style="color:#f92672">=</span><span style="color:#66d9ef">True</span>)
+</span></span><span style="display:flex;"><span>    condenser: CondenserConfig <span style="color:#f92672">=</span> Field(default_factory<span style="color:#f92672">=</span>ConversationWindowCondenserConfig)
+</span></span></code></pre></div><h3 id="82-openhandsconfig">8.2 OpenHandsConfig<a hidden class="anchor" aria-hidden="true" href="#82-openhandsconfig">#</a></h3>
+<p><strong>文件</strong>: <code>/home/gdw/tutorial/OpenHands/openhands/core/config/openhands_config.py</code></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">OpenHandsConfig</span>(BaseModel):
+</span></span><span style="display:flex;"><span>    max_iterations: int <span style="color:#f92672">=</span> Field(default<span style="color:#f92672">=</span>OH_MAX_ITERATIONS)  <span style="color:#75715e"># 默认 100</span>
+</span></span><span style="display:flex;"><span>    max_budget_per_task: float <span style="color:#f92672">|</span> <span style="color:#66d9ef">None</span> <span style="color:#f92672">=</span> Field(default<span style="color:#f92672">=</span><span style="color:#66d9ef">None</span>)
+</span></span></code></pre></div><h3 id="83-controller-初始化配置">8.3 Controller 初始化配置<a hidden class="anchor" aria-hidden="true" href="#83-controller-初始化配置">#</a></h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>controller <span style="color:#f92672">=</span> AgentController(
+</span></span><span style="display:flex;"><span>    agent<span style="color:#f92672">=</span>agent,
+</span></span><span style="display:flex;"><span>    conversation_stats<span style="color:#f92672">=</span>conversation_stats,
+</span></span><span style="display:flex;"><span>    iteration_delta<span style="color:#f92672">=</span>config<span style="color:#f92672">.</span>max_iterations,        <span style="color:#75715e"># 最大迭代</span>
+</span></span><span style="display:flex;"><span>    budget_per_task_delta<span style="color:#f92672">=</span>config<span style="color:#f92672">.</span>max_budget_per_task,  <span style="color:#75715e"># 最大预算</span>
+</span></span><span style="display:flex;"><span>    agent_to_llm_config<span style="color:#f92672">=</span>config<span style="color:#f92672">.</span>get_agent_to_llm_config_map(),
+</span></span><span style="display:flex;"><span>    event_stream<span style="color:#f92672">=</span>event_stream,
+</span></span><span style="display:flex;"><span>    initial_state<span style="color:#f92672">=</span>initial_state,
+</span></span><span style="display:flex;"><span>    headless_mode<span style="color:#f92672">=</span>headless_mode,
+</span></span><span style="display:flex;"><span>    confirmation_mode<span style="color:#f92672">=</span>config<span style="color:#f92672">.</span>security<span style="color:#f92672">.</span>confirmation_mode,
+</span></span><span style="display:flex;"><span>    replay_events<span style="color:#f92672">=</span>replay_events,
+</span></span><span style="display:flex;"><span>    security_analyzer<span style="color:#f92672">=</span>runtime<span style="color:#f92672">.</span>security_analyzer,
+</span></span><span style="display:flex;"><span>)
+</span></span></code></pre></div><hr>
+<h2 id="9-架构流程图">9. 架构流程图<a hidden class="anchor" aria-hidden="true" href="#9-架构流程图">#</a></h2>
+<h3 id="91-完整执行流程">9.1 完整执行流程<a hidden class="anchor" aria-hidden="true" href="#91-完整执行流程">#</a></h3>
+<pre tabindex="0"><code>┌─────────────────────────────────────────────────────────────────┐
+│                         用户提交任务                            │
+└─────────────────────────────────────────────────────────────────┘
+                                │
+                                ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    EventStream.add_event()                      │
+│  - 发布用户消息为 MessageAction                                 │
+└─────────────────────────────────────────────────────────────────┘
+                                │
+                                ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    AgentController.on_event()                    │
+│  - 接收事件                                                     │
+│  - 状态跟踪                                                     │
+│  - should_step() 判断是否执行步骤                              │
+└─────────────────────────────────────────────────────────────────┘
+                                │
+                                ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                      _step_with_exception_handling()            │
+│  - _step()                                                      │
+└─────────────────────────────────────────────────────────────────┘
+                                │
+            ┌───────────────────┴───────────────────┐
+            ▼                                       ▼
+┌─────────────────────────┐             ┌─────────────────────────┐
+│     _step()             │             │     重放模式            │
+│                         │             │                         │
+│  1. 检查状态            │             │  _replay_manager.step() │
+│  2. 同步预算            │             │  从保存的轨迹重放       │
+│  3. 循环检测            │             │                         │
+│  4. 控制标志检查        │             │                         │
+│  5. agent.step()        │             │                         │
+│  6. 安全分析            │             │                         │
+│  7. 发布动作            │             │                         │
+└─────────────────────────┘             └─────────────────────────┘
+            │
+            ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    EventStream.add_event(action)                │
+└─────────────────────────────────────────────────────────────────┘
+                                │
+                                ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                         Runtime                                │
+│  - 接收 Action                                                  │
+│  - 执行动作                                                     │
+│  - 返回 Observation                                            │
+└─────────────────────────────────────────────────────────────────┘
+                                │
+                                ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    AgentController._handle_observation()         │
+│  - 更新状态                                                     │
+│  - 继续主循环                                                   │
+└─────────────────────────────────────────────────────────────────┘
+</code></pre><h3 id="92-状态流转图">9.2 状态流转图<a hidden class="anchor" aria-hidden="true" href="#92-状态流转图">#</a></h3>
+<pre tabindex="0"><code>                    ┌──────────────┐
+                    │   LOADING    │
+                    └──────┬───────┘
+                           │
+                           ▼
+              ┌────────────────────────┐
+              │  AWAITING_USER_INPUT   │◄─────────────┐
+              └───────────┬────────────┘              │
+                          │                          │
+                          │ 用户输入                  │
+                          ▼                          │
+              ┌────────────────────────┐             │
+              │       RUNNING          │────────────►│
+              └───────────┬────────────┘             │
+                          │                          │
+                          │ 高风险动作                │
+                          ▼                          │
+              ┌────────────────────────┐             │
+              │AWAITING_USER_CONFIRMATION│           │
+              └───────────┬────────────┘             │
+                          │                          │
+              ┌───────────┴───────────┐             │
+              ▼                       ▼              │
+      ┌───────────────┐       ┌───────────────┐     │
+      │USER_CONFIRMED │       │ USER_REJECTED  │     │
+      └───────┬───────┘       └───────┬───────┘     │
+              │                       │              │
+              └───────────┬───────────┘              │
+                          │                          │
+                          ▼                          │
+              ┌────────────────────────┐             │
+              │        PAUSED         │──────────────┘
+              └───────────┬────────────┘
+                          │
+              ┌───────────┴───────────┐
+              ▼                       ▼
+      ┌───────────────┐       ┌───────────────┐
+      │    ERROR      │       │   FINISHED    │
+      └───────────────┘       └───────────────┘
+</code></pre><hr>
+<h2 id="10-面试问题">10. 面试问题<a hidden class="anchor" aria-hidden="true" href="#10-面试问题">#</a></h2>
+<h3 id="q1-agentcontroller-的主要职责是什么">Q1: AgentController 的主要职责是什么？<a hidden class="anchor" aria-hidden="true" href="#q1-agentcontroller-的主要职责是什么">#</a></h3>
+<p><strong>参考答案</strong>：</p>
+<blockquote>
+<p>AgentController 是 OpenHands 的<strong>中央协调器</strong>，主要职责：</p>
+<ol>
+<li><strong>主循环驱动</strong>：通过 <code>_step()</code> 驱动智能体循环执行</li>
+<li><strong>状态管理</strong>：通过 StateTracker 维护状态</li>
+<li><strong>事件路由</strong>：订阅 EventStream，处理 Action 和 Observation</li>
+<li><strong>委托管理</strong>：支持多智能体协作</li>
+<li><strong>循环检测</strong>：检测并恢复卡住的状态</li>
+<li><strong>安全分析</strong>：分析动作风险，处理确认模式</li>
+<li><strong>控制标志</strong>：管理迭代次数和预算限制</li>
+</ol>
+</blockquote>
+<hr>
+<h3 id="q2-agentcontroller-如何驱动主循环">Q2: AgentController 如何驱动主循环？<a hidden class="anchor" aria-hidden="true" href="#q2-agentcontroller-如何驱动主循环">#</a></h3>
+<p><strong>参考答案</strong>：</p>
+<blockquote>
+<p><strong>触发机制</strong>：EventStream 回调</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">on_event</span>(self, event: Event) <span style="color:#f92672">-&gt;</span> <span style="color:#66d9ef">None</span>:
+</span></span><span style="display:flex;"><span>    asyncio<span style="color:#f92672">.</span>get_event_loop()<span style="color:#f92672">.</span>run_until_complete(self<span style="color:#f92672">.</span>_on_event(event))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">async</span> <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">_on_event</span>(self, event: Event) <span style="color:#f92672">-&gt;</span> <span style="color:#66d9ef">None</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># 处理事件</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> should_step(event):
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">await</span> self<span style="color:#f92672">.</span>_step_with_exception_handling()
+</span></span></code></pre></div><p><strong>Step 执行流程</strong>：</p>
+<ol>
+<li>检查 AgentState 是否为 RUNNING</li>
+<li>同步预算与 LLM 成本</li>
+<li>循环检测（StuckDetector）</li>
+<li>运行控制标志（迭代/预算限制）</li>
+<li>调用 <code>agent.step(state)</code> 获取 Action</li>
+<li>安全分析（如启用确认模式）</li>
+<li>发布 Action 到 EventStream</li>
+</ol>
+<p><strong>终止条件</strong>：</p>
+<ul>
+<li>达到最大迭代次数</li>
+<li>达到最大预算</li>
+<li>Agent 返回 AgentFinishAction</li>
+<li>检测到循环卡住</li>
+</ul>
+</blockquote>
+<hr>
+<h3 id="q3-状态管理是如何工作的">Q3: 状态管理是如何工作的？<a hidden class="anchor" aria-hidden="true" href="#q3-状态管理是如何工作的">#</a></h3>
+<p><strong>参考答案</strong>：</p>
+<blockquote>
+<p><strong>State 结构</strong>：</p>
+<ul>
+<li><code>agent_state</code>：RUNNING、PAUSED、ERROR 等</li>
+<li><code>history</code>：事件历史列表</li>
+<li><code>iteration_flag</code>：迭代控制</li>
+<li><code>budget_flag</code>：预算控制</li>
+<li><code>delegate_level</code>：委托嵌套层级</li>
+<li><code>metrics</code>：LLM 成本和 token 使用</li>
+</ul>
+<p><strong>StateTracker</strong>：</p>
+<ul>
+<li><code>set_initial_state()</code>：初始化或恢复</li>
+<li><code>add_history()</code>：添加事件到历史</li>
+<li><code>run_control_flags()</code>：检查迭代/预算限制</li>
+<li><code>sync_budget_flag_with_metrics()</code>：同步预算与实际成本</li>
+</ul>
+<p><strong>状态持久化</strong>：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>state<span style="color:#f92672">.</span>save_to_session(sid, file_store, user_id)
+</span></span><span style="display:flex;"><span>State<span style="color:#f92672">.</span>restore_from_session(sid, file_store, user_id)
+</span></span></code></pre></div></blockquote>
+<hr>
+<h3 id="q4-什么是-controlflags如何工作">Q4: 什么是 ControlFlags？如何工作？<a hidden class="anchor" aria-hidden="true" href="#q4-什么是-controlflags如何工作">#</a></h3>
+<p><strong>参考答案</strong>：</p>
+<blockquote>
+<p><strong>ControlFlags</strong> 用于防止无限循环和超支：</p>
+<ol>
+<li><strong>IterationControlFlag</strong></li>
+</ol>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">IterationControlFlag</span>:
+</span></span><span style="display:flex;"><span>    max_value: int <span style="color:#f92672">=</span> <span style="color:#ae81ff">100</span>      <span style="color:#75715e"># 最大迭代次数</span>
+</span></span><span style="display:flex;"><span>    current_value: int <span style="color:#f92672">=</span> <span style="color:#ae81ff">0</span>    <span style="color:#75715e"># 当前迭代</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">step</span>(self):
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> self<span style="color:#f92672">.</span>reached_limit():
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">raise</span> <span style="color:#a6e22e">RuntimeError</span>(<span style="color:#e6db74">&#39;Agent reached maximum iteration...&#39;</span>)
+</span></span><span style="display:flex;"><span>        self<span style="color:#f92672">.</span>current_value <span style="color:#f92672">+=</span> <span style="color:#ae81ff">1</span>
+</span></span></code></pre></div><ol start="2">
+<li><strong>BudgetControlFlag</strong></li>
+</ol>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">BudgetControlFlag</span>:
+</span></span><span style="display:flex;"><span>    max_value: float          <span style="color:#75715e"># 最大预算</span>
+</span></span><span style="display:flex;"><span>    current_value: float      <span style="color:#75715e"># 已消耗</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">step</span>(self):
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> self<span style="color:#f92672">.</span>reached_limit():
+</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">raise</span> <span style="color:#a6e22e">RuntimeError</span>(<span style="color:#e6db74">&#39;Agent reached maximum budget...&#39;</span>)
+</span></span></code></pre></div><p><strong>限制增加</strong>：在非 headless 模式下，限制可动态增加 100</p>
+</blockquote>
+<hr>
+<h3 id="q5-如何检测和处理循环卡住">Q5: 如何检测和处理循环卡住？<a hidden class="anchor" aria-hidden="true" href="#q5-如何检测和处理循环卡住">#</a></h3>
+<p><strong>参考答案</strong>：</p>
+<blockquote>
+<p><strong>StuckDetector</strong> 检测以下模式：</p>
+<table>
+  <thead>
+      <tr>
+          <th>场景</th>
+          <th>检测条件</th>
+          <th>处理</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>重复动作-观察</td>
+          <td>相同动作 4 次相同观察</td>
+          <td>LoopRecoveryAction</td>
+      </tr>
+      <tr>
+          <td>重复动作-错误</td>
+          <td>相同动作 3 次错误观察</td>
+          <td>LoopRecoveryAction</td>
+      </tr>
+      <tr>
+          <td>独白</td>
+          <td>3 次 MessageAction 无观察</td>
+          <td>LoopRecoveryAction</td>
+      </tr>
+      <tr>
+          <td>上下文窗口错误</td>
+          <td>10+ 压缩事件</td>
+          <td>抛出异常</td>
+      </tr>
+  </tbody>
+</table>
+<p><strong>处理流程</strong>：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">if</span> self<span style="color:#f92672">.</span>_is_stuck():
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">await</span> self<span style="color:#f92672">.</span>_react_to_exception(
+</span></span><span style="display:flex;"><span>        AgentStuckInLoopError(<span style="color:#e6db74">&#39;Agent got stuck in a loop&#39;</span>)
+</span></span><span style="display:flex;"><span>    )
+</span></span></code></pre></div></blockquote>
+<hr>
+<h3 id="q6-多智能体委托是如何实现的">Q6: 多智能体委托是如何实现的？<a hidden class="anchor" aria-hidden="true" href="#q6-多智能体委托是如何实现的">#</a></h3>
+<p><strong>参考答案</strong>：</p>
+<blockquote>
+<p><strong>委托机制</strong>：</p>
+<ol>
+<li>Parent Agent 发送 <code>AgentDelegateAction</code></li>
+<li>Controller 创建 <strong>Delegate AgentController</strong></li>
+<li>Delegate <strong>共享</strong> Parent 的：
+<ul>
+<li>EventStream（同一消息总线）</li>
+<li>Metrics（成本/迭代计数）</li>
+<li>iteration_flag/budget_flag</li>
+</ul>
+</li>
+<li>Delegate 有独立的状态机</li>
+</ol>
+<p><strong>关键代码</strong>：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>state <span style="color:#f92672">=</span> State(
+</span></span><span style="display:flex;"><span>    delegate_level<span style="color:#f92672">=</span>self<span style="color:#f92672">.</span>state<span style="color:#f92672">.</span>delegate_level <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>,
+</span></span><span style="display:flex;"><span>    metrics<span style="color:#f92672">=</span>self<span style="color:#f92672">.</span>state<span style="color:#f92672">.</span>metrics,  <span style="color:#75715e"># 共享</span>
+</span></span><span style="display:flex;"><span>    iteration_flag<span style="color:#f92672">=</span>self<span style="color:#f92672">.</span>state<span style="color:#f92672">.</span>iteration_flag,  <span style="color:#75715e"># 共享</span>
+</span></span><span style="display:flex;"><span>)
+</span></span></code></pre></div><p><strong>通信</strong>：通过 EventStream，Delegate 的结果以 <code>AgentDelegateObservation</code> 返回</p>
+</blockquote>
+<hr>
+<h3 id="q7-agentcontroller-如何处理错误">Q7: AgentController 如何处理错误？<a hidden class="anchor" aria-hidden="true" href="#q7-agentcontroller-如何处理错误">#</a></h3>
+<p><strong>参考答案</strong>：</p>
+<blockquote>
+<p><strong>错误分类与处理</strong>：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">async</span> <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">_react_to_exception</span>(self, e: <span style="color:#a6e22e">Exception</span>) <span style="color:#f92672">-&gt;</span> <span style="color:#66d9ef">None</span>:
+</span></span><span style="display:flex;"><span>    self<span style="color:#f92672">.</span>state<span style="color:#f92672">.</span>last_error <span style="color:#f92672">=</span> <span style="color:#e6db74">f</span><span style="color:#e6db74">&#39;</span><span style="color:#e6db74">{</span>type(e)<span style="color:#f92672">.</span>__name__<span style="color:#e6db74">}</span><span style="color:#e6db74">: </span><span style="color:#e6db74">{</span>str(e)<span style="color:#e6db74">}</span><span style="color:#e6db74">&#39;</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> isinstance(e, AuthError):
+</span></span><span style="display:flex;"><span>        status <span style="color:#f92672">=</span> RuntimeStatus<span style="color:#f92672">.</span>AUTH_ERROR
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">elif</span> isinstance(e, RateLimitError):
+</span></span><span style="display:flex;"><span>        status <span style="color:#f92672">=</span> RuntimeStatus<span style="color:#f92672">.</span>RATE_LIMIT_ERROR
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">elif</span> isinstance(e, ContentPolicyViolationError):
+</span></span><span style="display:flex;"><span>        status <span style="color:#f92672">=</span> RuntimeStatus<span style="color:#f92672">.</span>CONTENT_POLICY_ERROR
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">await</span> self<span style="color:#f92672">.</span>set_agent_state_to(AgentState<span style="color:#f92672">.</span>ERROR)
+</span></span></code></pre></div><p><strong>状态设置</strong>：</p>
+<ul>
+<li>CONTEXT_WINDOW_EXCEEDED → 历史压缩</li>
+<li>AUTH_ERROR → 终止</li>
+<li>RATE_LIMIT_ERROR → 等待重试</li>
+<li>CONTENT_POLICY → 终止</li>
+</ul>
+</blockquote>
+<hr>
+<h3 id="q8-confirmation_mode-是如何工作的">Q8: confirmation_mode 是如何工作的？<a hidden class="anchor" aria-hidden="true" href="#q8-confirmation_mode-是如何工作的">#</a></h3>
+<p><strong>参考答案</strong>：</p>
+<blockquote>
+<p><strong>目的</strong>：在高风险动作执行前要求用户确认</p>
+<p><strong>流程</strong>：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">if</span> action<span style="color:#f92672">.</span>runnable <span style="color:#f92672">and</span> self<span style="color:#f92672">.</span>state<span style="color:#f92672">.</span>confirmation_mode:
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">await</span> self<span style="color:#f92672">.</span>_handle_security_analyzer(action)
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># action.confirmation_state 设置为:</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># - CONFIRMED：已确认，可执行</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># - REJECTED：用户拒绝</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># - REQUIRE_CONFIRMATION：需要确认</span>
+</span></span></code></pre></div><p><strong>Action 的安全风险</strong>：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>CmdRunAction(
+</span></span><span style="display:flex;"><span>    command<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;rm -rf /&#39;</span>,
+</span></span><span style="display:flex;"><span>    security_risk<span style="color:#f92672">=</span>ActionSecurityRisk<span style="color:#f92672">.</span>HIGH
+</span></span><span style="display:flex;"><span>)
+</span></span></code></pre></div><p><strong>处理</strong>：</p>
+<ul>
+<li>HIGH 风险 → REQUIRE_CONFIRMATION</li>
+<li>MEDIUM 风险 → 可能需要确认</li>
+<li>LOW 风险 → CONFIRMED</li>
+</ul>
+</blockquote>
+<hr>
+<h3 id="q9-什么是-replay_events如何实现重放">Q9: 什么是 replay_events？如何实现重放？<a hidden class="anchor" aria-hidden="true" href="#q9-什么是-replay_events如何实现重放">#</a></h3>
+<p><strong>参考答案</strong>：</p>
+<blockquote>
+<p><strong>ReplayManager</strong> 用于重放已保存的执行轨迹：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">ReplayManager</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">should_replay</span>(self) <span style="color:#f92672">-&gt;</span> bool:
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> len(self<span style="color:#f92672">.</span>events) <span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">0</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">step</span>(self) <span style="color:#f92672">-&gt;</span> Action:
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> self<span style="color:#f92672">.</span>events<span style="color:#f92672">.</span>pop(<span style="color:#ae81ff">0</span>)  <span style="color:#75715e"># 逐个返回保存的动作</span>
+</span></span></code></pre></div><p><strong>用途</strong>：</p>
+<ul>
+<li>调试：重放特定场景</li>
+<li>测试：验证修复</li>
+<li>演示：回放执行过程</li>
+</ul>
+</blockquote>
+<hr>
+<h3 id="q10-agentcontroller-与-agent-的关系是什么">Q10: AgentController 与 Agent 的关系是什么？<a hidden class="anchor" aria-hidden="true" href="#q10-agentcontroller-与-agent-的关系是什么">#</a></h3>
+<p><strong>参考答案</strong>：</p>
+<blockquote>
+<p><strong>职责分工</strong>：</p>
+<table>
+  <thead>
+      <tr>
+          <th>组件</th>
+          <th>职责</th>
+          <th>关注点</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td><strong>Agent</strong></td>
+          <td>决策</td>
+          <td>调用 LLM、生成动作、解析响应</td>
+      </tr>
+      <tr>
+          <td><strong>AgentController</strong></td>
+          <td>协调</td>
+          <td>主循环、状态、事件路由、异常处理</td>
+      </tr>
+  </tbody>
+</table>
+<p><strong>协作模式</strong>：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#75715e"># Controller 驱动循环</span>
+</span></span><span style="display:flex;"><span>action <span style="color:#f92672">=</span> self<span style="color:#f92672">.</span>agent<span style="color:#f92672">.</span>step(self<span style="color:#f92672">.</span>state)  <span style="color:#75715e"># Controller 调用 Agent</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Agent 只负责决策</span>
+</span></span><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">CodeActAgent</span>(Agent):
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">step</span>(self, state: State) <span style="color:#f92672">-&gt;</span> Action:
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e"># 构建 prompt</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e"># 调用 LLM</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e"># 解析为 Action</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> action
+</span></span></code></pre></div><p><strong>解耦设计</strong>：</p>
+<ul>
+<li>Agent 不知道 Controller 的存在</li>
+<li>Controller 通过 State 向 Agent 传递信息</li>
+<li>通过 EventStream 解耦</li>
+</ul>
+</blockquote>
+<hr>
+<h3 id="q11-如何扩展-agentcontroller-添加新功能">Q11: 如何扩展 AgentController 添加新功能？<a hidden class="anchor" aria-hidden="true" href="#q11-如何扩展-agentcontroller-添加新功能">#</a></h3>
+<p><strong>参考答案</strong>：</p>
+<blockquote>
+<p><strong>扩展点</strong>：</p>
+<ol>
+<li><strong>新的 Action 处理</strong></li>
+</ol>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">async</span> <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">_handle_action</span>(self, event: Action) <span style="color:#f92672">-&gt;</span> <span style="color:#66d9ef">None</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> isinstance(event, MyNewAction):
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">await</span> self<span style="color:#f92672">.</span>_handle_my_new_action(event)
+</span></span></code></pre></div><ol start="2">
+<li><strong>新的 Observation 处理</strong></li>
+</ol>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">async</span> <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">_handle_observation</span>(self, event: Observation) <span style="color:#f92672">-&gt;</span> <span style="color:#66d9ef">None</span>:
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> isinstance(event, MyNewObservation):
+</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">await</span> self<span style="color:#f92672">.</span>_handle_my_new_observation(event)
+</span></span></code></pre></div><ol start="3">
+<li><strong>新的控制标志</strong></li>
+</ol>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">MyControlFlag</span>(ControlFlag):
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">step</span>(self):
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e"># 自定义逻辑</span>
+</span></span></code></pre></div><ol start="4">
+<li><strong>新的循环检测</strong></li>
+</ol>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">MyStuckDetector</span>(StuckDetector):
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">is_stuck</span>(self) <span style="color:#f92672">-&gt;</span> bool:
+</span></span><span style="display:flex;"><span>        <span style="color:#75715e"># 自定义检测</span>
+</span></span></code></pre></div></blockquote>
+
+
+  </div>
+
+  <footer class="post-footer">
+    <ul class="post-tags">
+    </ul>
+  </footer>
+</article>
+    </main>
+    
+<footer class="footer">
+        <span>&copy; 2026 <a href="http://localhost:1313/">My New Hugo Project</a></span> · 
+
+    <span>
+        Powered by
+        <a href="https://gohugo.io/" rel="noopener noreferrer" target="_blank">Hugo</a> &
+        <a href="https://github.com/adityatelange/hugo-PaperMod/" rel="noopener" target="_blank">PaperMod</a>
+    </span>
+</footer>
+<a href="#top" aria-label="go to top" title="Go to Top (Alt + G)" class="top-link" id="top-link" accesskey="g">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 6" fill="currentColor">
+        <path d="M12 6H0l6-6z" />
+    </svg>
+</a>
+
+<script>
+    let menu = document.getElementById('menu');
+    if (menu) {
+        
+        const scrollPosition = localStorage.getItem("menu-scroll-position");
+        if (scrollPosition) {
+            menu.scrollLeft = parseInt(scrollPosition, 10);
+        }
+        
+        menu.onscroll = function () {
+            localStorage.setItem("menu-scroll-position", menu.scrollLeft);
+        }
+    }
+
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener("click", function (e) {
+            e.preventDefault();
+            var id = this.getAttribute("href").substr(1);
+            if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView({
+                    behavior: "smooth"
+                });
+            } else {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView();
+            }
+            if (id === "top") {
+                history.replaceState(null, null, " ");
+            } else {
+                history.pushState(null, null, `#${id}`);
+            }
+        });
+    });
+
+</script>
+<script>
+    var mybutton = document.getElementById("top-link");
+    window.onscroll = function () {
+        if (document.body.scrollTop > 800 || document.documentElement.scrollTop > 800) {
+            mybutton.style.visibility = "visible";
+            mybutton.style.opacity = "1";
+        } else {
+            mybutton.style.visibility = "hidden";
+            mybutton.style.opacity = "0";
+        }
+    };
+
+</script>
+<script>
+    document.getElementById("theme-toggle").addEventListener("click", () => {
+        const html = document.querySelector("html");
+        if (html.dataset.theme === "dark") {
+            html.dataset.theme = 'light';
+            localStorage.setItem("pref-theme", 'light');
+        } else {
+            html.dataset.theme = 'dark';
+            localStorage.setItem("pref-theme", 'dark');
+        }
+    })
+
+</script>
+</body>
+
+</html>
