@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+  <channel>
+    <title>My New Hugo Project</title>
+    <link>http://localhost:1313/</link>
+    <description>Recent content on My New Hugo Project</description>
+    <generator>Hugo</generator>
+    <language>en-us</language>
+    <lastBuildDate>Thu, 09 Apr 2026 20:27:38 +0800</lastBuildDate>
+    <atom:link href="http://localhost:1313/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Agent</title>
+      <link>http://localhost:1313/posts/agent/</link>
+      <pubDate>Thu, 09 Apr 2026 20:27:38 +0800</pubDate>
+      <guid>http://localhost:1313/posts/agent/</guid>
+      <description>&lt;ol&gt;
+&lt;li&gt;什么是 ReAct 框架？
+ReAct = Reason（推理/思考） + Act（行动）。
+在没有 ReAct 之前，大语言模型的工作方式有两种极端：
+只思考不行动（如传统的思维链 Chain-of-Thought, CoT）： 就像一个被关在小黑屋里的诸葛亮，算无遗策，但他没法上网查今天的最新数据。一旦他的内置知识有盲区，他就会靠“脑补”产生幻觉。
+只行动不思考： 就像一个冲动的莽汉，拿到任务就盲目地去调用各种工具，疯狂试错，最后把自己绕晕，无法解决复杂的连环问题。
+ReAct 框架巧妙地将这两者结合在了一起，让 Agent 像一个谨慎严谨的侦探一样，走一步、看一步、想一步。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;hr&gt;
+&lt;ol start=&#34;2&#34;&gt;
+&lt;li&gt;ReAct 的核心运转机制：“TAO”循环
+ReAct 的魔法在于它定义了一个极其经典的执行循环，我们通常称之为 TAO 循环。这三个字母分别代表：
+🤔 Thought（思考）： Agent 首先会分析当前的任务状态，并推断出下一步需要做什么。
+（内心OS：“用户问我 2026 年奥斯卡最佳影片导演的年龄，我得先找出这部电影的名字，然后再查导演是谁，最后查他的出生年份。”）
+🛠️ Action（行动）： 基于刚才的思考，Agent 决定调用工具箱里的某个工具，并传入具体的参数。
+（动作：调用【搜索引擎】工具，搜索关键词：“2026 奥斯卡最佳影片”）
+👀 Observation（观察）： 工具执行完毕后，Agent 会获取外部世界的真实反馈结果。
+（反馈结果：搜索页面显示，2026年奥斯卡最佳影片是《某某电影》。）
+完成一次 TAO 循环后，Agent 不会停下，而是把这次的“观察”结果作为新的上下文，开启下一轮的“思考”，直到最终拿到可以回答用户的完整答案。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;hr&gt;
+&lt;ol start=&#34;3&#34;&gt;
+&lt;li&gt;一个生动的例子：做一道复杂的菜
+想象一下你在厨房做一道从未做过的菜。
+如果你只用思维链（单纯思考），你会在脑子里想：“先把肉切了，然后下锅炒，然后加盐，最后出锅”。一旦火候不对或者锅底烧焦，因为你闭着眼睛没去看，最后菜就毁了。
+如果你用的是 ReAct（思考+行动+观察），你的过程是这样的：
+Thought（思考）： 菜谱上说先把油烧热，我得去开火。
+Action（行动）： 扭动燃气灶开关（调用物理动作）。
+Observation（观察）： 看到火苗出来了，锅底开始冒一点青烟。
+Thought（思考）： 锅热了，现在该把肉放进去了，但我得小心别被油溅到。
+Action（行动）： 把肉倒进锅里，迅速拿锅盖挡住（调用防守动作）。
+Observation（观察）： 听到“刺啦”一声，肉变色了。
+&amp;hellip;（循环继续，直到菜品出锅）
+通过这种交替进行的模式，Agent 就不再是凭空想象，而是将自己的推理牢牢锚定在外部世界的客观事实（观察结果）上。这极大减少了幻觉，并让它能够解决那些需要多步嵌套、中途需要根据情况动态调整策略的复杂问题。&lt;/li&gt;
+&lt;/ol&gt;</description>
+    </item>
+  </channel>
+</rss>
