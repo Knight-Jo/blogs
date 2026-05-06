@@ -110,6 +110,26 @@
 
 <article class="first-entry"> 
   <header class="entry-header">
+    <h2 class="entry-hint-parent">Async_logger
+      <span class="entry-hint" title="Draft">
+        <svg xmlns="http://www.w3.org/2000/svg" height="20" viewBox="0 -960 960 960" fill="currentColor">
+          <path
+            d="M160-410v-60h300v60H160Zm0-165v-60h470v60H160Zm0-165v-60h470v60H160Zm360 580v-123l221-220q9-9 20-13t22-4q12 0 23 4.5t20 13.5l37 37q9 9 13 20t4 22q0 11-4.5 22.5T862.09-380L643-160H520Zm300-263-37-37 37 37ZM580-220h38l121-122-18-19-19-18-122 121v38Zm141-141-19-18 37 37-18-19Z" />
+        </svg>
+      </span>
+    </h2>
+  </header>
+  <div class="entry-content">
+    <p>异步日志系统 前端核心逻辑 业务线程只做内存写入，不被磁盘 I/O 卡住，真正的磁盘写入交给后台线程完成。
+1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 // 调用此函数解决前端把LOG_XXX&lt;&lt;&#34;...&#34;传递给后端，后端再将日志消息写入日志文件 void AsyncLogging::append(const char *logline, int len) { // - 进入临界区，保护共享的缓冲指针和队列。 // - 这里的锁很短，只包含内存操作，所以开销可控。 std::lock_guard&lt;std::mutex&gt; lg(mutex_); // 缓冲区剩余的空间足够写入 if (currentBuffer_-&gt;avail() &gt; static_cast&lt;size_t&gt;(len)) { // - 检查当前大缓冲是否还有足够空间。 // - 如果能放下，就直接把日志追加进去（纯内存拷贝）。 currentBuffer_-&gt;append(logline, len); } else { // - 如果放不下，说明当前缓冲“满了”。 // - 把这个满缓冲移动进队列，交给后端写线程统一写盘。 buffers_.push_back(std::move(currentBuffer_)); if (nextBuffer_) { // - 尝试用“备用缓冲”顶上来继续写。 // - 这样前端可以立刻继续写日志，不需要等待后端写盘。 currentBuffer_ = std::move(nextBuffer_); } else { currentBuffer_.reset(new LargeBuffer); } currentBuffer_-&gt;append(logline, len); // - 通知后端写线程：队列里有可写数据了。 // - 后端线程被唤醒后会批量写盘，提高吞吐。 cond_.notify_one(); } } 锁开销只做内存操作，不写盘 使用缓冲区切换，保证性能相对稳定 后台线程写逻辑 后端线程通过交换缓冲和批量写盘实现高吞吐， 同时把锁的持有时间压缩到最短，保证前端线程几乎只做内存操作。
+...</p>
+  </div>
+  <footer class="entry-footer"><span title='2026-05-04 15:19:33 +0800 CST'>May 4, 2026</span></footer>
+  <a class="entry-link" aria-label="post link to Async_logger" href="http://localhost:1313/posts/async_logger/"></a>
+</article>
+
+<article class="post-entry"> 
+  <header class="entry-header">
     <h2 class="entry-hint-parent">Openhand_overview
     </h2>
   </header>
@@ -118,8 +138,47 @@
 OpenHands 能做什么？ 自动化代码开发：编写、修改、重构代码 Bug 修复：分析和修复代码问题 代码审查：审查 Pull Request 自动化测试：运行和编写测试 技术调研：搜索文档、阅读代码库 发布准备：提交代码、创建 PR 应用场景 场景 说明 本地开发 通过 CLI 或 GUI 与 OpenHands 交互 云端服务 托管在云端的服务，支持 Slack、Jira 集成 企业部署 支持 Kubernetes 私有化部署 SDK 集成 通过 Python SDK 构建自己的 AI 应用 系统架构 整体架构图 ┌─────────────────────────────────────────────────────────────────┐ │ 用户界面层 │ │ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ │ │ │ CLI │ │ Web GUI │ │ Slack │ │ SDK │ │ │ └────┬─────┘ └────┬─────┘ └────┬─────┘ └────┬─────┘ │ └───────┼─────────────┼─────────────┼─────────────┼───────────────┘ │ │ │ │ v v v v ┌─────────────────────────────────────────────────────────────────┐ │ 服务层 (App Server) │ │ ┌──────────────────────────────────────────────────────────┐ │ │ │ Conversation Manager (会话管理) │ │ │ └──────────────────────────────────────────────────────────┘ │ │ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ │ │ │ Sandbox │ │ Event │ │ User │ │ │ │ Service │ │ Service │ │ Service │ │ │ └──────┬──────┘ └──────┬──────┘ └─────────────┘ │ └─────────┼────────────────┼──────────────────────────────────────┘ │ │ v v ┌─────────────────────────────────────────────────────────────────┐ │ 智能体层 (Agent Core) │ │ ┌──────────────────────────────────────────────────────────┐ │ │ │ AgentController │ │ │ │ (智能体控制器) │ │ │ └──────────────────────────────────────────────────────────┘ │ │ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ │ │ │ Agent │ │ LLM │ │ Event │ │ │ │ (智能体) │ │ (大模型) │ │ Stream │ │ │ └──────┬──────┘ └──────┬──────┘ └──────┬──────┘ │ └─────────┼────────────────┼────────────────┼─────────────────────┘ │ │ │ v v v ┌─────────────────────────────────────────────────────────────────┐ │ 运行时层 (Runtime) │ │ ┌──────────────────────────────────────────────────────────┐ │ │ │ Action Execution Server │ │ │ │ (动作执行服务器) │ │ │ └──────────────────────────────────────────────────────────┘ │ │ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ │ │ │ Docker │ │ IPython │ │ Browser │ │ │ │ (容器) │ │ (代码执行) │ │ (浏览) │ │ │ └─────────────┘ └─────────────┘ └─────────────┘ │ └─────────────────────────────────────────────────────────────────┘ 核心组件 1. 智能体 (Agent) 智能体是 OpenHands 的&#34;大脑&#34;，负责：
 ...</p>
   </div>
-  <footer class="entry-footer"><span title='2026-04-10 09:52:11 +0800 CST'>April 10, 2026</span></footer>
+  <footer class="entry-footer"><span title='2026-05-01 09:52:11 +0800 CST'>May 1, 2026</span></footer>
   <a class="entry-link" aria-label="post link to Openhand_overview" href="http://localhost:1313/posts/openhand_overview/"></a>
+</article>
+
+<article class="post-entry"> 
+  <header class="entry-header">
+    <h2 class="entry-hint-parent">Design_pattern
+      <span class="entry-hint" title="Draft">
+        <svg xmlns="http://www.w3.org/2000/svg" height="20" viewBox="0 -960 960 960" fill="currentColor">
+          <path
+            d="M160-410v-60h300v60H160Zm0-165v-60h470v60H160Zm0-165v-60h470v60H160Zm360 580v-123l221-220q9-9 20-13t22-4q12 0 23 4.5t20 13.5l37 37q9 9 13 20t4 22q0 11-4.5 22.5T862.09-380L643-160H520Zm300-263-37-37 37 37ZM580-220h38l121-122-18-19-19-18-122 121v38Zm141-141-19-18 37 37-18-19Z" />
+        </svg>
+      </span>
+    </h2>
+  </header>
+  <div class="entry-content">
+    <p>创建型设计模式 提供创建对象的机制。
+单例 工厂 抽象工厂 原型 生成器 结构型设计模式 解决如何将对象和类组装成较大的结构。
+适配器模式 装饰器模式 代理模式 行为型设计模式 负责对象间的高效沟通和职责委派。
+责任链模式 观察者模式 命令模式 策略模式 </p>
+  </div>
+  <footer class="entry-footer"><span title='2026-04-24 15:43:16 +0800 CST'>April 24, 2026</span></footer>
+  <a class="entry-link" aria-label="post link to Design_pattern" href="http://localhost:1313/posts/design_pattern/"></a>
+</article>
+
+<article class="post-entry"> 
+  <header class="entry-header">
+    <h2 class="entry-hint-parent">Cpp_concurrent
+    </h2>
+  </header>
+  <div class="entry-content">
+    <p>没问题！将火力集中在“并发编程基础”与“进阶并发控制与性能调优”上，是非常聪明的求职策略。在 C&#43;&#43; 后端面试中，这部分不仅是考察频率极高的“重灾区”，更是区分“普通 C&#43;&#43; 程序员”和“具备核心竞争力的后端开发”的分水岭。
+我们直接切入正题，为你制定一份深度聚焦多线程与并发调优的学习计划。
+深度聚焦：C&#43;&#43; 多线程与并发调优专属学习计划 我们将这个大板块细化为五个循序渐进的阶段，从 API 使用深入到 CPU 硬件级别的性能优化。
+第一阶段：并发基石与高级互斥（重点掌握锁的粒度与选择） 熟练使用基础线程和锁只是起点，后端开发更看重在复杂场景下如何选择合适的锁以最大化并发度。
+核心知识点： RAII 锁进阶： 深入对比 std::lock_guard（轻量级、不可移动）与 std::unique_lock（灵活、支持延迟锁定和时间锁定、可移动）的底层实现差异。 读写锁的应用： 掌握 C&#43;&#43;14 引入的 std::shared_mutex 和 std::shared_lock，理解在“读多写少”的高并发场景下，它为何比普通的互斥锁性能更好。 死锁的系统性防范： 掌握按固定顺序加锁的原则，以及如何使用 C&#43;&#43;17 的 std::scoped_lock 一次性安全获取多个锁，避免哲学家就餐问题。 面试高频： “如何设计一个线程安全的单例模式？”（考察 Double-Checked Locking 与 std::call_once）。 1.1 RAII锁 不要手动调用 mtx.lock() 和 mtx.unlock(), 使用RAII机制来管理锁，保证异常安全。
+std::lock_guard : 创建时立即加锁，离开作用域时自动解锁，不能被赋值，也不能被移动。只需要再一个作用域内简单保护临界区。 std::unique_lock : 内部维护一个状态标志。支持延迟加锁 std::defer_lock, 尝试加锁 try_lock 和提前手动解锁 unlock，并且支持移动语义。可以与条件变量std::condition_variable 配合使用（条件变量需要等待时释放锁）， 或需要在作用域中提前解锁以减小锁粒度。 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 void process_data() { // 场景 1：简单保护，使用 lock_guard { std::lock_guard&lt;std::mutex&gt; lock(mtx); shared_data&#43;&#43;; // 离开大括号，自动解锁 } // 场景 2：需要中间解锁执行耗时非共享操作，使用 unique_lock { std::unique_lock&lt;std::mutex&gt; lock(mtx); shared_data&#43;&#43;; lock.unlock(); // 提前手动解锁，非常关键！减小锁粒度！ // 模拟耗时的 IO 或计算操作，此时不需要霸占锁 std::cout &lt;&lt; &#34;执行耗时非共享操作...&#34; &lt;&lt; std::endl; lock.lock(); // 如果后续还需要访问共享资源，可以再次加锁 shared_data--; } } 1.2 读写锁：高并发读多写少 C&#43;&#43;14 引入 std::shared_mutex，允许多个线程同时读，但写操作是独占的。
+...</p>
+  </div>
+  <footer class="entry-footer"><span title='2026-04-15 13:40:38 +0800 CST'>April 15, 2026</span></footer>
+  <a class="entry-link" aria-label="post link to Cpp_concurrent" href="http://localhost:1313/posts/cpp_concurrent/"></a>
 </article>
 
 <article class="post-entry"> 
@@ -130,7 +189,7 @@ OpenHands 能做什么？ 自动化代码开发：编写、修改、重构代码
   <div class="entry-content">
     <p>目录 概述 AgentController 核心结构 状态管理 主循环实现 事件流集成 委托/多智能体系统 循环检测与错误处理 配置系统 架构流程图 面试问题 1. 概述 1.1 什么是 AgentController AgentController 是 OpenHands 的&#34;引擎&#34;，负责：
 驱动智能体的主循环 管理任务状态 协调各组件通信 处理异常和循环检测 文件: /home/gdw/tutorial/OpenHands/openhands/controller/agent_controller.py
-1.2 核心职责 AgentController │ ├── 主循环驱动 (_step) ├── 状态管理 (StateTracker) ├── 事件路由 (EventStream) ├── 委托管理 (Delegate) ├── 循环检测 (StuckDetector) ├── 安全分析 (SecurityAnalyzer) └── 配置控制 (ControlFlags) 2. AgentController 核心结构 2.1 类定义 class AgentController: id: str agent: Agent max_iterations: int event_stream: EventStream state: State confirmation_mode: bool agent_to_llm_config: dict[str, LLMConfig] agent_configs: dict[str, AgentConfig] parent: &#39;AgentController | None&#39; = None delegate: &#39;AgentController | None&#39; = None _pending_action_info: tuple[Action, float] | None = None _closed: bool = False 2.2 初始化流程 def __init__( self, agent: Agent, event_stream: EventStream, conversation_stats: ConversationStats, iteration_delta: int, # 最大迭代次数 budget_per_task_delta: float | None = None, # 最大预算 agent_to_llm_config: dict[str, LLMConfig] | None = None, agent_configs: dict[str, AgentConfig] | None = None, sid: str | None = None, file_store: FileStore | None = None, user_id: str | None = None, confirmation_mode: bool = False, initial_state: State | None = None, is_delegate: bool = False, headless_mode: bool = True, status_callback: Callable | None = None, replay_events: list[Event] | None = None, security_analyzer: &#39;SecurityAnalyzer | None&#39; = None, ): 初始化步骤：
+1.2 核心职责 AgentController │ ├── 主循环驱动 (_step) ├── 状态管理 (StateTracker) ├── 事件路由 (EventStream) ├── 委托管理 (Delegate) ├── 循环检测 (StuckDetector) ├── 安全分析 (SecurityAnalyzer) └── 配置控制 (ControlFlags) 2. AgentController 核心结构 2.1 类定义 1 2 3 4 5 6 7 8 9 10 11 12 13 class AgentController: id: str agent: Agent max_iterations: int event_stream: EventStream state: State confirmation_mode: bool agent_to_llm_config: dict[str, LLMConfig] agent_configs: dict[str, AgentConfig] parent: &#39;AgentController | None&#39; = None delegate: &#39;AgentController | None&#39; = None _pending_action_info: tuple[Action, float] | None = None _closed: bool = False 2.2 初始化流程 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 def __init__( self, agent: Agent, event_stream: EventStream, conversation_stats: ConversationStats, iteration_delta: int, # 最大迭代次数 budget_per_task_delta: float | None = None, # 最大预算 agent_to_llm_config: dict[str, LLMConfig] | None = None, agent_configs: dict[str, AgentConfig] | None = None, sid: str | None = None, file_store: FileStore | None = None, user_id: str | None = None, confirmation_mode: bool = False, initial_state: State | None = None, is_delegate: bool = False, headless_mode: bool = True, status_callback: Callable | None = None, replay_events: list[Event] | None = None, security_analyzer: &#39;SecurityAnalyzer | None&#39; = None, ): 初始化步骤：
 ...</p>
   </div>
   <footer class="entry-footer"><span title='2026-04-10 09:51:58 +0800 CST'>April 10, 2026</span></footer>
@@ -161,8 +220,8 @@ OpenHands 能做什么？ 自动化代码开发：编写、修改、重构代码
     <p>概述 OpenHands 的记忆系统是一个多层次的系统，负责管理 AI Agent 的信息检索和对话历史处理。它使 Agent 能够在执行任务时记住重要的上下文信息，并根据需要检索知识。
 记忆系统主要由三个核心组件构成：
 Memory (openhands/memory/memory.py) - 处理召回动作和微代理知识检索 ConversationMemory (openhands/memory/conversation_memory.py) - 将事件流转换为 LLM 可用的消息格式 Condenser (openhands/memory/condenser/) - 当对话历史过长时进行压缩和摘要 1. Recall 类型 OpenHands 定义了两种召回类型，用于区分不同来源的记忆检索：
-# openhands/events/recall_type.py class RecallType(str, Enum): WORKSPACE_CONTEXT = &#39;workspace_context&#39; # 工作区上下文（仓库、运行时等） KNOWLEDGE = &#39;knowledge&#39; # 知识微代理触发 类型 触发方式 用途 WORKSPACE_CONTEXT 用户消息附带召回请求 获取仓库信息、运行时环境、对话指令 KNOWLEDGE 匹配知识微代理的关键词 检索用户自定义的知识库 2. 微代理 (Microagent) 系统 微代理是 OpenHands 记忆系统的重要组成部分，允许用户定义可被动态检索的知识片段。
-2.1 微代理类型 # openhands/microagent/types.py class MicroagentType(str, Enum): KNOWLEDGE = &#39;knowledge&#39; # 关键词触发型知识 REPO_KNOWLEDGE = &#39;repo_knowledge&#39; # 仓库级知识，始终激活 TASK = &#39;task&#39; # 任务型，需要用户输入 类型 描述 触发方式 KNOWLEDGE 可选微代理 对话中包含关键词时触发 REPO_KNOWLEDGE 仓库级知识 始终加载，提供仓库特定信息 TASK 任务型 需要用户通过 /agent_name 命令调用 2.2 微代理存储位置 微代理从以下位置加载：
+1 2 3 4 # openhands/events/recall_type.py class RecallType(str, Enum): WORKSPACE_CONTEXT = &#39;workspace_context&#39; # 工作区上下文（仓库、运行时等） KNOWLEDGE = &#39;knowledge&#39; # 知识微代理触发 类型 触发方式 用途 WORKSPACE_CONTEXT 用户消息附带召回请求 获取仓库信息、运行时环境、对话指令 KNOWLEDGE 匹配知识微代理的关键词 检索用户自定义的知识库 2. 微代理 (Microagent) 系统 微代理是 OpenHands 记忆系统的重要组成部分，允许用户定义可被动态检索的知识片段。
+2.1 微代理类型 1 2 3 4 5 # openhands/microagent/types.py class MicroagentType(str, Enum): KNOWLEDGE = &#39;knowledge&#39; # 关键词触发型知识 REPO_KNOWLEDGE = &#39;repo_knowledge&#39; # 仓库级知识，始终激活 TASK = &#39;task&#39; # 任务型，需要用户输入 类型 描述 触发方式 KNOWLEDGE 可选微代理 对话中包含关键词时触发 REPO_KNOWLEDGE 仓库级知识 始终加载，提供仓库特定信息 TASK 任务型 需要用户通过 /agent_name 命令调用 2.2 微代理存储位置 微代理从以下位置加载：
 ...</p>
   </div>
   <footer class="entry-footer"><span title='2026-04-10 09:51:46 +0800 CST'>April 10, 2026</span></footer>
@@ -178,7 +237,7 @@ Memory (openhands/memory/memory.py) - 处理召回动作和微代理知识检索
     <p>目录 概述 Event 类层次结构 EventStream 实现 EventStore 持久化 发布-订阅机制 事件流转 事件序列化 设计模式 架构流程图 面试问题 1. 概述 1.1 什么是 EventStream EventStream 是 OpenHands 的中央消息总线，采用发布-订阅（Pub/Sub）模式连接所有组件。
 文件: /home/gdw/tutorial/OpenHands/openhands/events/stream.py
 1.2 核心功能 EventStream │ ├── 发布/订阅机制 ├── 事件持久化 ├── 异步事件分发 ├── 秘密替换 └── 写缓存优化 2. Event 类层次结构 2.1 基类 Event 文件: /home/gdw/tutorial/OpenHands/openhands/events/event.py
-@dataclass class Event: INVALID_ID = -1 # 属性 id: int # 唯一标识 timestamp: str # ISO 时间戳 source: EventSource # 来源 (AGENT/USER/ENVIRONMENT) cause: int # 触发事件的 ID timeout: float | None # 超时时间 2.2 EventSource 枚举 class EventSource(str, Enum): AGENT = &#39;agent&#39; # 智能体发出 USER = &#39;user&#39; # 用户发出 ENVIRONMENT = &#39;environment&#39; # 环境发出 2.3 Action 和 Observation # Action - 智能体发出的动作请求 @dataclass class Action(Event): runnable: ClassVar[bool] = False # 是否可执行 # Observation - 执行结果 @dataclass class Observation(Event): content: str # 结果内容 2.4 完整事件层次 Event (基类) ├── Action (动作请求) │ ├── CmdRunAction # 运行命令 │ ├── IPythonRunCellAction # 运行 Python │ ├── BrowseURLAction # 浏览 URL │ ├── BrowseInteractiveAction # 交互浏览 │ ├── FileReadAction # 读文件 │ ├── FileWriteAction # 写文件 │ ├── FileEditAction # 编辑文件 │ ├── MCPAction # MCP 工具调用 │ ├── MessageAction # 消息 │ ├── AgentThinkAction # 思考 │ ├── AgentFinishAction # 完成任务 │ ├── AgentRejectAction # 拒绝任务 │ ├── AgentDelegateAction # 委托 │ ├── CondensationRequestAction # 请求压缩 │ └── NullAction # 空动作 │ └── Observation (执行结果) ├── CmdOutputObservation # 命令输出 ├── IPythonRunCellObservation ├── BrowserOutputObservation ├── FileReadObservation ├── ErrorObservation # 错误 ├── SuccessObservation # 成功 ├── AgentDelegateObservation # 委托结果 ├── MCPObservation # MCP 结果 ├── RecallObservation # 记忆检索 └── NullObservation # 空观察 2.5 关键 Action 类 文件: /home/gdw/tutorial/OpenHands/openhands/events/action/commands.py
+1 2 3 4 5 6 7 8 9 @dataclass class Event: INVALID_ID = -1 # 属性 id: int # 唯一标识 timestamp: str # ISO 时间戳 source: EventSource # 来源 (AGENT/USER/ENVIRONMENT) cause: int # 触发事件的 ID timeout: float | None # 超时时间 2.2 EventSource 枚举 1 2 3 4 class EventSource(str, Enum): AGENT = &#39;agent&#39; # 智能体发出 USER = &#39;user&#39; # 用户发出 ENVIRONMENT = &#39;environment&#39; # 环境发出 2.3 Action 和 Observation 1 2 3 4 5 6 7 8 9 # Action - 智能体发出的动作请求 @dataclass class Action(Event): runnable: ClassVar[bool] = False # 是否可执行 # Observation - 执行结果 @dataclass class Observation(Event): content: str # 结果内容 2.4 完整事件层次 Event (基类) ├── Action (动作请求) │ ├── CmdRunAction # 运行命令 │ ├── IPythonRunCellAction # 运行 Python │ ├── BrowseURLAction # 浏览 URL │ ├── BrowseInteractiveAction # 交互浏览 │ ├── FileReadAction # 读文件 │ ├── FileWriteAction # 写文件 │ ├── FileEditAction # 编辑文件 │ ├── MCPAction # MCP 工具调用 │ ├── MessageAction # 消息 │ ├── AgentThinkAction # 思考 │ ├── AgentFinishAction # 完成任务 │ ├── AgentRejectAction # 拒绝任务 │ ├── AgentDelegateAction # 委托 │ ├── CondensationRequestAction # 请求压缩 │ └── NullAction # 空动作 │ └── Observation (执行结果) ├── CmdOutputObservation # 命令输出 ├── IPythonRunCellObservation ├── BrowserOutputObservation ├── FileReadObservation ├── ErrorObservation # 错误 ├── SuccessObservation # 成功 ├── AgentDelegateObservation # 委托结果 ├── MCPObservation # MCP 结果 ├── RecallObservation # 记忆检索 └── NullObservation # 空观察 2.5 关键 Action 类 文件: /home/gdw/tutorial/OpenHands/openhands/events/action/commands.py
 ...</p>
   </div>
   <footer class="entry-footer"><span title='2026-04-10 09:51:41 +0800 CST'>April 10, 2026</span></footer>
@@ -194,11 +253,29 @@ Memory (openhands/memory/memory.py) - 处理召回动作和微代理知识检索
     <p>目录 Agent 概述 Agent 基类设计 CodeActAgent 详解 工具系统 多智能体模式 Skills 系统 MCP 集成 Microagent 微智能体 架构图 面试问题 1. Agent 概述 1.1 什么是 Agent 在 OpenHands 中，Agent（智能体） 是整个系统的&#34;大脑&#34;。它负责：
 理解用户任务 制定执行计划 生成具体动作（Action） 决定何时完成任务 Agent 基于大语言模型（LLM）实现，通过 step() 方法驱动每次决策。
 1.2 Agent 类型 Agent 类 用途 CodeActAgent openhands/agenthub/codeact_agent/ 主要智能体，统一动作空间 BrowsingAgent openhands/agenthub/browsing_agent/ 网页浏览 ReadonlyAgent openhands/agenthub/readonly_agent/ 只读操作（继承 CodeActAgent） LocAgent openhands/agenthub/loc_agent/ 代码库探索 DummyAgent openhands/agenthub/dummy_agent/ 测试用 2. Agent 基类设计 文件: /home/gdw/tutorial/OpenHands/openhands/controller/agent.py
-2.1 核心抽象 class Agent(ABC): _registry: dict[str, type[&#39;Agent&#39;]] = {} # 类注册表 sandbox_plugins: list[PluginRequirement] = [] config_model: type[AgentConfig] = AgentConfig @abstractmethod def step(self, state: &#39;State&#39;) -&gt; &#39;Action&#39;: &#34;&#34;&#34;执行一步智能体决策 - 子类必须实现&#34;&#34;&#34; pass 2.2 类注册模式 OpenHands 使用类注册模式实现 Agent 的发现和加载：
+2.1 核心抽象 1 2 3 4 5 6 7 8 9 class Agent(ABC): _registry: dict[str, type[&#39;Agent&#39;]] = {} # 类注册表 sandbox_plugins: list[PluginRequirement] = [] config_model: type[AgentConfig] = AgentConfig @abstractmethod def step(self, state: &#39;State&#39;) -&gt; &#39;Action&#39;: &#34;&#34;&#34;执行一步智能体决策 - 子类必须实现&#34;&#34;&#34; pass 2.2 类注册模式 OpenHands 使用类注册模式实现 Agent 的发现和加载：
 ...</p>
   </div>
   <footer class="entry-footer"><span title='2026-04-10 09:47:47 +0800 CST'>April 10, 2026</span></footer>
   <a class="entry-link" aria-label="post link to Openhands Agent浅析" href="http://localhost:1313/posts/openhands_agent/"></a>
+</article>
+
+<article class="post-entry"> 
+  <header class="entry-header">
+    <h2 class="entry-hint-parent">Agent
+      <span class="entry-hint" title="Draft">
+        <svg xmlns="http://www.w3.org/2000/svg" height="20" viewBox="0 -960 960 960" fill="currentColor">
+          <path
+            d="M160-410v-60h300v60H160Zm0-165v-60h470v60H160Zm0-165v-60h470v60H160Zm360 580v-123l221-220q9-9 20-13t22-4q12 0 23 4.5t20 13.5l37 37q9 9 13 20t4 22q0 11-4.5 22.5T862.09-380L643-160H520Zm300-263-37-37 37 37ZM580-220h38l121-122-18-19-19-18-122 121v38Zm141-141-19-18 37 37-18-19Z" />
+        </svg>
+      </span>
+    </h2>
+  </header>
+  <div class="entry-content">
+    <p> 什么是 ReAct 框架？ ReAct = Reason（推理/思考） &#43; Act（行动）。 在没有 ReAct 之前，大语言模型的工作方式有两种极端： 只思考不行动（如传统的思维链 Chain-of-Thought, CoT）： 就像一个被关在小黑屋里的诸葛亮，算无遗策，但他没法上网查今天的最新数据。一旦他的内置知识有盲区，他就会靠“脑补”产生幻觉。 只行动不思考： 就像一个冲动的莽汉，拿到任务就盲目地去调用各种工具，疯狂试错，最后把自己绕晕，无法解决复杂的连环问题。 ReAct 框架巧妙地将这两者结合在了一起，让 Agent 像一个谨慎严谨的侦探一样，走一步、看一步、想一步。 ReAct 的核心运转机制：“TAO”循环 ReAct 的魔法在于它定义了一个极其经典的执行循环，我们通常称之为 TAO 循环。这三个字母分别代表： 🤔 Thought（思考）： Agent 首先会分析当前的任务状态，并推断出下一步需要做什么。 （内心OS：“用户问我 2026 年奥斯卡最佳影片导演的年龄，我得先找出这部电影的名字，然后再查导演是谁，最后查他的出生年份。”） 🛠️ Action（行动）： 基于刚才的思考，Agent 决定调用工具箱里的某个工具，并传入具体的参数。 （动作：调用【搜索引擎】工具，搜索关键词：“2026 奥斯卡最佳影片”） 👀 Observation（观察）： 工具执行完毕后，Agent 会获取外部世界的真实反馈结果。 （反馈结果：搜索页面显示，2026年奥斯卡最佳影片是《某某电影》。） 完成一次 TAO 循环后，Agent 不会停下，而是把这次的“观察”结果作为新的上下文，开启下一轮的“思考”，直到最终拿到可以回答用户的完整答案。 一个生动的例子：做一道复杂的菜 想象一下你在厨房做一道从未做过的菜。 如果你只用思维链（单纯思考），你会在脑子里想：“先把肉切了，然后下锅炒，然后加盐，最后出锅”。一旦火候不对或者锅底烧焦，因为你闭着眼睛没去看，最后菜就毁了。 如果你用的是 ReAct（思考&#43;行动&#43;观察），你的过程是这样的： Thought（思考）： 菜谱上说先把油烧热，我得去开火。 Action（行动）： 扭动燃气灶开关（调用物理动作）。 Observation（观察）： 看到火苗出来了，锅底开始冒一点青烟。 Thought（思考）： 锅热了，现在该把肉放进去了，但我得小心别被油溅到。 Action（行动）： 把肉倒进锅里，迅速拿锅盖挡住（调用防守动作）。 Observation（观察）： 听到“刺啦”一声，肉变色了。 …（循环继续，直到菜品出锅） 通过这种交替进行的模式，Agent 就不再是凭空想象，而是将自己的推理牢牢锚定在外部世界的客观事实（观察结果）上。这极大减少了幻觉，并让它能够解决那些需要多步嵌套、中途需要根据情况动态调整策略的复杂问题。 </p>
+  </div>
+  <footer class="entry-footer"><span title='2026-04-09 20:27:38 +0800 CST'>April 9, 2026</span></footer>
+  <a class="entry-link" aria-label="post link to Agent" href="http://localhost:1313/posts/agent/"></a>
 </article>
     </main>
     

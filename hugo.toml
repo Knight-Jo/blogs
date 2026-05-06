@@ -2,3 +2,9 @@ baseURL = 'https://example.org/'
 locale = 'en-us'
 title = 'My New Hugo Project'
 theme = 'PaperMod'
+
+[markup]
+	[markup.highlight]
+                linenos = true
+		noClasses = false
+                style = "base16-snazzy"

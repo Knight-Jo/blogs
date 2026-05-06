@@ -72,6 +72,19 @@ Agent 基于大语言模型（LLM）实现，通过 step() 方法驱动每次决
 2. Agent 基类设计
 文件: /home/gdw/tutorial/OpenHands/openhands/controller/agent.py
 2.1 核心抽象
+
+
+1
+2
+3
+4
+5
+6
+7
+8
+9
+
+
 class Agent(ABC):
     _registry: dict[str, type[&#39;Agent&#39;]] = {}  # 类注册表
     sandbox_plugins: list[PluginRequirement] = []
@@ -81,6 +94,8 @@ class Agent(ABC):
     def step(self, state: &#39;State&#39;) -&gt; &#39;Action&#39;:
         &#34;&#34;&#34;执行一步智能体决策 - 子类必须实现&#34;&#34;&#34;
         pass
+
+
 2.2 类注册模式
 OpenHands 使用类注册模式实现 Agent 的发现和加载：">
 <meta name="author" content="">
@@ -256,58 +271,129 @@ OpenHands 使用类注册模式实现 Agent 的发现和加载：">
 <h2 id="2-agent-基类设计">2. Agent 基类设计<a hidden class="anchor" aria-hidden="true" href="#2-agent-基类设计">#</a></h2>
 <p><strong>文件</strong>: <code>/home/gdw/tutorial/OpenHands/openhands/controller/agent.py</code></p>
 <h3 id="21-核心抽象">2.1 核心抽象<a hidden class="anchor" aria-hidden="true" href="#21-核心抽象">#</a></h3>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">Agent</span>(ABC):
-</span></span><span style="display:flex;"><span>    _registry: dict[str, type[<span style="color:#e6db74">&#39;Agent&#39;</span>]] <span style="color:#f92672">=</span> {}  <span style="color:#75715e"># 类注册表</span>
-</span></span><span style="display:flex;"><span>    sandbox_plugins: list[PluginRequirement] <span style="color:#f92672">=</span> []
-</span></span><span style="display:flex;"><span>    config_model: type[AgentConfig] <span style="color:#f92672">=</span> AgentConfig
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">@abstractmethod</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">step</span>(self, state: <span style="color:#e6db74">&#39;State&#39;</span>) <span style="color:#f92672">-&gt;</span> <span style="color:#e6db74">&#39;Action&#39;</span>:
-</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#34;&#34;&#34;执行一步智能体决策 - 子类必须实现&#34;&#34;&#34;</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">pass</span>
-</span></span></code></pre></div><h3 id="22-类注册模式">2.2 类注册模式<a hidden class="anchor" aria-hidden="true" href="#22-类注册模式">#</a></h3>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">Agent</span><span class="p">(</span><span class="n">ABC</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">    <span class="n">_registry</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">type</span><span class="p">[</span><span class="s1">&#39;Agent&#39;</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>  <span class="c1"># 类注册表</span>
+</span></span><span class="line"><span class="cl">    <span class="n">sandbox_plugins</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">PluginRequirement</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+</span></span><span class="line"><span class="cl">    <span class="n">config_model</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="n">AgentConfig</span><span class="p">]</span> <span class="o">=</span> <span class="n">AgentConfig</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="nd">@abstractmethod</span>
+</span></span><span class="line"><span class="cl">    <span class="k">def</span> <span class="nf">step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">:</span> <span class="s1">&#39;State&#39;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;Action&#39;</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">        <span class="s2">&#34;&#34;&#34;执行一步智能体决策 - 子类必须实现&#34;&#34;&#34;</span>
+</span></span><span class="line"><span class="cl">        <span class="k">pass</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="22-类注册模式">2.2 类注册模式<a hidden class="anchor" aria-hidden="true" href="#22-类注册模式">#</a></h3>
 <p>OpenHands 使用<strong>类注册模式</strong>实现 Agent 的发现和加载：</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">Agent</span>(ABC):
-</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">@classmethod</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">register</span>(cls, name: str, agent_cls: type[<span style="color:#e6db74">&#39;Agent&#39;</span>]) <span style="color:#f92672">-&gt;</span> <span style="color:#66d9ef">None</span>:
-</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#34;&#34;&#34;注册智能体到注册表&#34;&#34;&#34;</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> name <span style="color:#f92672">in</span> cls<span style="color:#f92672">.</span>_registry:
-</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">raise</span> AgentAlreadyRegisteredError(name)
-</span></span><span style="display:flex;"><span>        cls<span style="color:#f92672">.</span>_registry[name] <span style="color:#f92672">=</span> agent_cls
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">@classmethod</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">get_cls</span>(cls, name: str) <span style="color:#f92672">-&gt;</span> type[<span style="color:#e6db74">&#39;Agent&#39;</span>]:
-</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#34;&#34;&#34;根据名称获取智能体类&#34;&#34;&#34;</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> name <span style="color:#f92672">not</span> <span style="color:#f92672">in</span> cls<span style="color:#f92672">.</span>_registry:
-</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">raise</span> AgentNotRegisteredError(name)
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> cls<span style="color:#f92672">.</span>_registry[name]
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#a6e22e">@classmethod</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">list_agents</span>(cls) <span style="color:#f92672">-&gt;</span> list[str]:
-</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#34;&#34;&#34;列出所有注册的智能体&#34;&#34;&#34;</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> list(cls<span style="color:#f92672">.</span>_registry<span style="color:#f92672">.</span>keys())
-</span></span></code></pre></div><p><strong>使用方式</strong>：</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#75715e"># 注册</span>
-</span></span><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">MyAgent</span>(Agent):
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">pass</span>
-</span></span><span style="display:flex;"><span>Agent<span style="color:#f92672">.</span>register(<span style="color:#e6db74">&#39;my_agent&#39;</span>, MyAgent)
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#75715e"># 获取</span>
-</span></span><span style="display:flex;"><span>agent_cls <span style="color:#f92672">=</span> Agent<span style="color:#f92672">.</span>get_cls(<span style="color:#e6db74">&#39;codeact_agent&#39;</span>)
-</span></span></code></pre></div><h3 id="23-工具管理">2.3 工具管理<a hidden class="anchor" aria-hidden="true" href="#23-工具管理">#</a></h3>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">Agent</span>(ABC):
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">__init__</span>(self, config: AgentConfig, llm_registry: LLMRegistry):
-</span></span><span style="display:flex;"><span>        self<span style="color:#f92672">.</span>tools: list[ChatCompletionToolParam] <span style="color:#f92672">=</span> []  <span style="color:#75715e"># 内置工具</span>
-</span></span><span style="display:flex;"><span>        self<span style="color:#f92672">.</span>mcp_tools: dict[str, ChatCompletionToolParam] <span style="color:#f92672">=</span> {}  <span style="color:#75715e"># MCP 工具</span>
-</span></span><span style="display:flex;"><span>        self<span style="color:#f92672">.</span>llm <span style="color:#f92672">=</span> llm_registry<span style="color:#f92672">.</span>get_llm(config<span style="color:#f92672">.</span>llm)
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">set_mcp_tools</span>(self, mcp_tools: list[dict]) <span style="color:#f92672">-&gt;</span> <span style="color:#66d9ef">None</span>:
-</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#34;&#34;&#34;设置 MCP 工具&#34;&#34;&#34;</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">for</span> tool <span style="color:#f92672">in</span> mcp_tools:
-</span></span><span style="display:flex;"><span>            _tool <span style="color:#f92672">=</span> ChatCompletionToolParam(<span style="color:#f92672">**</span>tool)
-</span></span><span style="display:flex;"><span>            self<span style="color:#f92672">.</span>mcp_tools[_tool[<span style="color:#e6db74">&#39;function&#39;</span>][<span style="color:#e6db74">&#39;name&#39;</span>]] <span style="color:#f92672">=</span> _tool
-</span></span><span style="display:flex;"><span>            self<span style="color:#f92672">.</span>tools<span style="color:#f92672">.</span>append(_tool)
-</span></span></code></pre></div><hr>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">Agent</span><span class="p">(</span><span class="n">ABC</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">    <span class="nd">@classmethod</span>
+</span></span><span class="line"><span class="cl">    <span class="k">def</span> <span class="nf">register</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">agent_cls</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="s1">&#39;Agent&#39;</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">        <span class="s2">&#34;&#34;&#34;注册智能体到注册表&#34;&#34;&#34;</span>
+</span></span><span class="line"><span class="cl">        <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_registry</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">            <span class="k">raise</span> <span class="n">AgentAlreadyRegisteredError</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">        <span class="bp">cls</span><span class="o">.</span><span class="n">_registry</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">agent_cls</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="nd">@classmethod</span>
+</span></span><span class="line"><span class="cl">    <span class="k">def</span> <span class="nf">get_cls</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">type</span><span class="p">[</span><span class="s1">&#39;Agent&#39;</span><span class="p">]:</span>
+</span></span><span class="line"><span class="cl">        <span class="s2">&#34;&#34;&#34;根据名称获取智能体类&#34;&#34;&#34;</span>
+</span></span><span class="line"><span class="cl">        <span class="k">if</span> <span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_registry</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">            <span class="k">raise</span> <span class="n">AgentNotRegisteredError</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">        <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_registry</span><span class="p">[</span><span class="n">name</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="nd">@classmethod</span>
+</span></span><span class="line"><span class="cl">    <span class="k">def</span> <span class="nf">list_agents</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+</span></span><span class="line"><span class="cl">        <span class="s2">&#34;&#34;&#34;列出所有注册的智能体&#34;&#34;&#34;</span>
+</span></span><span class="line"><span class="cl">        <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="bp">cls</span><span class="o">.</span><span class="n">_registry</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>使用方式</strong>：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="c1"># 注册</span>
+</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">MyAgent</span><span class="p">(</span><span class="n">Agent</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">    <span class="k">pass</span>
+</span></span><span class="line"><span class="cl"><span class="n">Agent</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="s1">&#39;my_agent&#39;</span><span class="p">,</span> <span class="n">MyAgent</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># 获取</span>
+</span></span><span class="line"><span class="cl"><span class="n">agent_cls</span> <span class="o">=</span> <span class="n">Agent</span><span class="o">.</span><span class="n">get_cls</span><span class="p">(</span><span class="s1">&#39;codeact_agent&#39;</span><span class="p">)</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="23-工具管理">2.3 工具管理<a hidden class="anchor" aria-hidden="true" href="#23-工具管理">#</a></h3>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">Agent</span><span class="p">(</span><span class="n">ABC</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">AgentConfig</span><span class="p">,</span> <span class="n">llm_registry</span><span class="p">:</span> <span class="n">LLMRegistry</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">        <span class="bp">self</span><span class="o">.</span><span class="n">tools</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">ChatCompletionToolParam</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>  <span class="c1"># 内置工具</span>
+</span></span><span class="line"><span class="cl">        <span class="bp">self</span><span class="o">.</span><span class="n">mcp_tools</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">ChatCompletionToolParam</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>  <span class="c1"># MCP 工具</span>
+</span></span><span class="line"><span class="cl">        <span class="bp">self</span><span class="o">.</span><span class="n">llm</span> <span class="o">=</span> <span class="n">llm_registry</span><span class="o">.</span><span class="n">get_llm</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">llm</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="k">def</span> <span class="nf">set_mcp_tools</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mcp_tools</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">        <span class="s2">&#34;&#34;&#34;设置 MCP 工具&#34;&#34;&#34;</span>
+</span></span><span class="line"><span class="cl">        <span class="k">for</span> <span class="n">tool</span> <span class="ow">in</span> <span class="n">mcp_tools</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">            <span class="n">_tool</span> <span class="o">=</span> <span class="n">ChatCompletionToolParam</span><span class="p">(</span><span class="o">**</span><span class="n">tool</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">            <span class="bp">self</span><span class="o">.</span><span class="n">mcp_tools</span><span class="p">[</span><span class="n">_tool</span><span class="p">[</span><span class="s1">&#39;function&#39;</span><span class="p">][</span><span class="s1">&#39;name&#39;</span><span class="p">]]</span> <span class="o">=</span> <span class="n">_tool</span>
+</span></span><span class="line"><span class="cl">            <span class="bp">self</span><span class="o">.</span><span class="n">tools</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">_tool</span><span class="p">)</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><hr>
 <h2 id="3-codeactagent-详解">3. CodeActAgent 详解<a hidden class="anchor" aria-hidden="true" href="#3-codeactagent-详解">#</a></h2>
 <h3 id="31-什么是-codeact">3.1 什么是 CodeAct<a hidden class="anchor" aria-hidden="true" href="#31-什么是-codeact">#</a></h3>
 <p><strong>CodeAct</strong> 源自论文 <a href="https://arxiv.org/abs/2402.01030">CodeAct: Towards Unified Code Actions</a>，核心思想是：</p>
@@ -318,42 +404,88 @@ OpenHands 使用类注册模式实现 Agent 的发现和加载：">
 <p><strong>CodeAct</strong>：只用一个&quot;代码执行&quot;工具，智能体生成 Python 代码来描述操作。</p>
 <h3 id="32-codeactagent-结构">3.2 CodeActAgent 结构<a hidden class="anchor" aria-hidden="true" href="#32-codeactagent-结构">#</a></h3>
 <p><strong>文件</strong>: <code>/home/gdw/tutorial/OpenHands/openhands/agenthub/codeact_agent/codeact_agent.py</code></p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">CodeActAgent</span>(Agent):
-</span></span><span style="display:flex;"><span>    VERSION <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;2.2&#39;</span>
-</span></span><span style="display:flex;"><span>    sandbox_plugins: list[PluginRequirement] <span style="color:#f92672">=</span> [
-</span></span><span style="display:flex;"><span>        AgentSkillsRequirement(),  <span style="color:#75715e"># 提供 Python 函数库</span>
-</span></span><span style="display:flex;"><span>        JupyterRequirement(),       <span style="color:#75715e"># 交互式 Python 解释器</span>
-</span></span><span style="display:flex;"><span>    ]
-</span></span></code></pre></div><h3 id="33-step-执行流程">3.3 Step 执行流程<a hidden class="anchor" aria-hidden="true" href="#33-step-执行流程">#</a></h3>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">step</span>(self, state: State) <span style="color:#f92672">-&gt;</span> <span style="color:#e6db74">&#39;Action&#39;</span>:
-</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># 1. 返回待处理动作（如果有）</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> self<span style="color:#f92672">.</span>pending_actions:
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> self<span style="color:#f92672">.</span>pending_actions<span style="color:#f92672">.</span>popleft()
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># 2. 检查是否需要压缩历史</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">match</span> self<span style="color:#f92672">.</span>condenser<span style="color:#f92672">.</span>condensed_history(state):
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">case</span> View(events<span style="color:#f92672">=</span>events, forgotten_event_ids<span style="color:#f92672">=</span>forgotten_ids):
-</span></span><span style="display:flex;"><span>            condensed_history <span style="color:#f92672">=</span> events
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">case</span> Condensation(action<span style="color:#f92672">=</span>condensation_action):
-</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">return</span> condensation_action  <span style="color:#75715e"># 返回压缩动作</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># 3. 构建 LLM 消息</span>
-</span></span><span style="display:flex;"><span>    messages <span style="color:#f92672">=</span> self<span style="color:#f92672">.</span>_get_messages(condensed_history, initial_user_message, forgotten_event_ids)
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># 4. 调用 LLM</span>
-</span></span><span style="display:flex;"><span>    params <span style="color:#f92672">=</span> {
-</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#39;messages&#39;</span>: messages,
-</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#39;tools&#39;</span>: check_tools(self<span style="color:#f92672">.</span>tools, self<span style="color:#f92672">.</span>llm<span style="color:#f92672">.</span>config),
-</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#39;extra_body&#39;</span>: {<span style="color:#f92672">...</span>}
-</span></span><span style="display:flex;"><span>    }
-</span></span><span style="display:flex;"><span>    response <span style="color:#f92672">=</span> self<span style="color:#f92672">.</span>llm<span style="color:#f92672">.</span>completion(<span style="color:#f92672">**</span>params)
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># 5. 解析响应为动作</span>
-</span></span><span style="display:flex;"><span>    actions <span style="color:#f92672">=</span> self<span style="color:#f92672">.</span>response_to_actions(response)
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">for</span> action <span style="color:#f92672">in</span> actions:
-</span></span><span style="display:flex;"><span>        self<span style="color:#f92672">.</span>pending_actions<span style="color:#f92672">.</span>append(action)
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> self<span style="color:#f92672">.</span>pending_actions<span style="color:#f92672">.</span>popleft()
-</span></span></code></pre></div><h3 id="34-可用工具">3.4 可用工具<a hidden class="anchor" aria-hidden="true" href="#34-可用工具">#</a></h3>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">CodeActAgent</span><span class="p">(</span><span class="n">Agent</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">    <span class="n">VERSION</span> <span class="o">=</span> <span class="s1">&#39;2.2&#39;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">sandbox_plugins</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">PluginRequirement</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span>
+</span></span><span class="line"><span class="cl">        <span class="n">AgentSkillsRequirement</span><span class="p">(),</span>  <span class="c1"># 提供 Python 函数库</span>
+</span></span><span class="line"><span class="cl">        <span class="n">JupyterRequirement</span><span class="p">(),</span>       <span class="c1"># 交互式 Python 解释器</span>
+</span></span><span class="line"><span class="cl">    <span class="p">]</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="33-step-执行流程">3.3 Step 执行流程<a hidden class="anchor" aria-hidden="true" href="#33-step-执行流程">#</a></h3>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="k">def</span> <span class="nf">step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">:</span> <span class="n">State</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s1">&#39;Action&#39;</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">    <span class="c1"># 1. 返回待处理动作（如果有）</span>
+</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">pending_actions</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">pending_actions</span><span class="o">.</span><span class="n">popleft</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="c1"># 2. 检查是否需要压缩历史</span>
+</span></span><span class="line"><span class="cl">    <span class="k">match</span> <span class="bp">self</span><span class="o">.</span><span class="n">condenser</span><span class="o">.</span><span class="n">condensed_history</span><span class="p">(</span><span class="n">state</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">        <span class="k">case</span> <span class="n">View</span><span class="p">(</span><span class="n">events</span><span class="o">=</span><span class="n">events</span><span class="p">,</span> <span class="n">forgotten_event_ids</span><span class="o">=</span><span class="n">forgotten_ids</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">            <span class="n">condensed_history</span> <span class="o">=</span> <span class="n">events</span>
+</span></span><span class="line"><span class="cl">        <span class="k">case</span> <span class="n">Condensation</span><span class="p">(</span><span class="n">action</span><span class="o">=</span><span class="n">condensation_action</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">            <span class="k">return</span> <span class="n">condensation_action</span>  <span class="c1"># 返回压缩动作</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="c1"># 3. 构建 LLM 消息</span>
+</span></span><span class="line"><span class="cl">    <span class="n">messages</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_messages</span><span class="p">(</span><span class="n">condensed_history</span><span class="p">,</span> <span class="n">initial_user_message</span><span class="p">,</span> <span class="n">forgotten_event_ids</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="c1"># 4. 调用 LLM</span>
+</span></span><span class="line"><span class="cl">    <span class="n">params</span> <span class="o">=</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="s1">&#39;messages&#39;</span><span class="p">:</span> <span class="n">messages</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">        <span class="s1">&#39;tools&#39;</span><span class="p">:</span> <span class="n">check_tools</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tools</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">llm</span><span class="o">.</span><span class="n">config</span><span class="p">),</span>
+</span></span><span class="line"><span class="cl">        <span class="s1">&#39;extra_body&#39;</span><span class="p">:</span> <span class="p">{</span><span class="o">...</span><span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="n">response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">llm</span><span class="o">.</span><span class="n">completion</span><span class="p">(</span><span class="o">**</span><span class="n">params</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="c1"># 5. 解析响应为动作</span>
+</span></span><span class="line"><span class="cl">    <span class="n">actions</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">response_to_actions</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="k">for</span> <span class="n">action</span> <span class="ow">in</span> <span class="n">actions</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">        <span class="bp">self</span><span class="o">.</span><span class="n">pending_actions</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">action</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">pending_actions</span><span class="o">.</span><span class="n">popleft</span><span class="p">()</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="34-可用工具">3.4 可用工具<a hidden class="anchor" aria-hidden="true" href="#34-可用工具">#</a></h3>
 <table>
   <thead>
       <tr>
@@ -407,56 +539,117 @@ OpenHands 使用类注册模式实现 Agent 的发现和加载：">
 </table>
 <h3 id="35-工具配置">3.5 工具配置<a hidden class="anchor" aria-hidden="true" href="#35-工具配置">#</a></h3>
 <p>工具根据配置选择性启用：</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">_get_tools</span>(self) <span style="color:#f92672">-&gt;</span> list[<span style="color:#e6db74">&#39;ChatCompletionToolParam&#39;</span>]:
-</span></span><span style="display:flex;"><span>    tools <span style="color:#f92672">=</span> []
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> self<span style="color:#f92672">.</span>config<span style="color:#f92672">.</span>enable_cmd:
-</span></span><span style="display:flex;"><span>        tools<span style="color:#f92672">.</span>append(create_cmd_run_tool(<span style="color:#f92672">...</span>))
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> self<span style="color:#f92672">.</span>config<span style="color:#f92672">.</span>enable_think:
-</span></span><span style="display:flex;"><span>        tools<span style="color:#f92672">.</span>append(ThinkTool)
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> self<span style="color:#f92672">.</span>config<span style="color:#f92672">.</span>enable_finish:
-</span></span><span style="display:flex;"><span>        tools<span style="color:#f92672">.</span>append(FinishTool)
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> self<span style="color:#f92672">.</span>config<span style="color:#f92672">.</span>enable_browsing:
-</span></span><span style="display:flex;"><span>        tools<span style="color:#f92672">.</span>append(BrowserTool)
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> self<span style="color:#f92672">.</span>config<span style="color:#f92672">.</span>enable_jupyter:
-</span></span><span style="display:flex;"><span>        tools<span style="color:#f92672">.</span>append(IPythonTool)
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> self<span style="color:#f92672">.</span>config<span style="color:#f92672">.</span>enable_plan_mode:
-</span></span><span style="display:flex;"><span>        tools<span style="color:#f92672">.</span>append(create_task_tracker_tool(<span style="color:#f92672">...</span>))
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">if</span> self<span style="color:#f92672">.</span>config<span style="color:#f92672">.</span>enable_editor:
-</span></span><span style="display:flex;"><span>        tools<span style="color:#f92672">.</span>append(create_str_replace_editor_tool(<span style="color:#f92672">...</span>))
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> tools
-</span></span></code></pre></div><hr>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="k">def</span> <span class="nf">_get_tools</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="s1">&#39;ChatCompletionToolParam&#39;</span><span class="p">]:</span>
+</span></span><span class="line"><span class="cl">    <span class="n">tools</span> <span class="o">=</span> <span class="p">[]</span>
+</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">enable_cmd</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">        <span class="n">tools</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">create_cmd_run_tool</span><span class="p">(</span><span class="o">...</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">enable_think</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">        <span class="n">tools</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ThinkTool</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">enable_finish</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">        <span class="n">tools</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">FinishTool</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">enable_browsing</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">        <span class="n">tools</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">BrowserTool</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">enable_jupyter</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">        <span class="n">tools</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">IPythonTool</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">enable_plan_mode</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">        <span class="n">tools</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">create_task_tracker_tool</span><span class="p">(</span><span class="o">...</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">enable_editor</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">        <span class="n">tools</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">create_str_replace_editor_tool</span><span class="p">(</span><span class="o">...</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="n">tools</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><hr>
 <h2 id="4-工具系统">4. 工具系统<a hidden class="anchor" aria-hidden="true" href="#4-工具系统">#</a></h2>
 <h3 id="41-工具定义模式">4.1 工具定义模式<a hidden class="anchor" aria-hidden="true" href="#41-工具定义模式">#</a></h3>
 <p>工具定义为 <code>ChatCompletionToolParam</code> 对象（LiteLLM 格式）：</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#75715e"># ThinkTool 示例</span>
-</span></span><span style="display:flex;"><span>ThinkTool <span style="color:#f92672">=</span> ChatCompletionToolParam(
-</span></span><span style="display:flex;"><span>    type<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;function&#39;</span>,
-</span></span><span style="display:flex;"><span>    function<span style="color:#f92672">=</span>ChatCompletionToolParamFunctionChunk(
-</span></span><span style="display:flex;"><span>        name<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;think&#39;</span>,
-</span></span><span style="display:flex;"><span>        description<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;Use the tool to think about something...&#39;</span>,
-</span></span><span style="display:flex;"><span>        parameters<span style="color:#f92672">=</span>{
-</span></span><span style="display:flex;"><span>            <span style="color:#e6db74">&#39;type&#39;</span>: <span style="color:#e6db74">&#39;object&#39;</span>,
-</span></span><span style="display:flex;"><span>            <span style="color:#e6db74">&#39;properties&#39;</span>: {
-</span></span><span style="display:flex;"><span>                <span style="color:#e6db74">&#39;thought&#39;</span>: {<span style="color:#e6db74">&#39;type&#39;</span>: <span style="color:#e6db74">&#39;string&#39;</span>, <span style="color:#e6db74">&#39;description&#39;</span>: <span style="color:#e6db74">&#39;The thought to log.&#39;</span>},
-</span></span><span style="display:flex;"><span>            },
-</span></span><span style="display:flex;"><span>            <span style="color:#e6db74">&#39;required&#39;</span>: [<span style="color:#e6db74">&#39;thought&#39;</span>],
-</span></span><span style="display:flex;"><span>        },
-</span></span><span style="display:flex;"><span>    ),
-</span></span><span style="display:flex;"><span>)
-</span></span></code></pre></div><h3 id="42-动作解析">4.2 动作解析<a hidden class="anchor" aria-hidden="true" href="#42-动作解析">#</a></h3>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="c1"># ThinkTool 示例</span>
+</span></span><span class="line"><span class="cl"><span class="n">ThinkTool</span> <span class="o">=</span> <span class="n">ChatCompletionToolParam</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="nb">type</span><span class="o">=</span><span class="s1">&#39;function&#39;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="n">function</span><span class="o">=</span><span class="n">ChatCompletionToolParamFunctionChunk</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">        <span class="n">name</span><span class="o">=</span><span class="s1">&#39;think&#39;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">        <span class="n">description</span><span class="o">=</span><span class="s1">&#39;Use the tool to think about something...&#39;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">        <span class="n">parameters</span><span class="o">=</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl">            <span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;object&#39;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">            <span class="s1">&#39;properties&#39;</span><span class="p">:</span> <span class="p">{</span>
+</span></span><span class="line"><span class="cl">                <span class="s1">&#39;thought&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;type&#39;</span><span class="p">:</span> <span class="s1">&#39;string&#39;</span><span class="p">,</span> <span class="s1">&#39;description&#39;</span><span class="p">:</span> <span class="s1">&#39;The thought to log.&#39;</span><span class="p">},</span>
+</span></span><span class="line"><span class="cl">            <span class="p">},</span>
+</span></span><span class="line"><span class="cl">            <span class="s1">&#39;required&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;thought&#39;</span><span class="p">],</span>
+</span></span><span class="line"><span class="cl">        <span class="p">},</span>
+</span></span><span class="line"><span class="cl">    <span class="p">),</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="42-动作解析">4.2 动作解析<a hidden class="anchor" aria-hidden="true" href="#42-动作解析">#</a></h3>
 <p><strong>文件</strong>: <code>/home/gdw/tutorial/OpenHands/openhands/agenthub/codeact_agent/function_calling.py</code></p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">response_to_actions</span>(response: ModelResponse, mcp_tool_names: list[str] <span style="color:#f92672">|</span> <span style="color:#66d9ef">None</span> <span style="color:#f92672">=</span> <span style="color:#66d9ef">None</span>) <span style="color:#f92672">-&gt;</span> list[Action]:
-</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;&#34;&#34;将 LLM 响应转换为 Action 列表&#34;&#34;&#34;</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">for</span> tool_call <span style="color:#f92672">in</span> response<span style="color:#f92672">.</span>tool_calls:
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">if</span> tool_call<span style="color:#f92672">.</span>function<span style="color:#f92672">.</span>name <span style="color:#f92672">==</span> <span style="color:#e6db74">&#39;bash&#39;</span>:
-</span></span><span style="display:flex;"><span>            action <span style="color:#f92672">=</span> CmdRunAction(command<span style="color:#f92672">=</span>arguments[<span style="color:#e6db74">&#39;command&#39;</span>], <span style="color:#f92672">...</span>)
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">elif</span> tool_call<span style="color:#f92672">.</span>function<span style="color:#f92672">.</span>name <span style="color:#f92672">==</span> <span style="color:#e6db74">&#39;IPythonTool&#39;</span>:
-</span></span><span style="display:flex;"><span>            action <span style="color:#f92672">=</span> IPythonRunCellAction(code<span style="color:#f92672">=</span>arguments[<span style="color:#e6db74">&#39;code&#39;</span>])
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">elif</span> tool_call<span style="color:#f92672">.</span>function<span style="color:#f92672">.</span>name <span style="color:#f92672">==</span> <span style="color:#e6db74">&#39;finish&#39;</span>:
-</span></span><span style="display:flex;"><span>            action <span style="color:#f92672">=</span> AgentFinishAction()
-</span></span><span style="display:flex;"><span>        <span style="color:#75715e"># ... 更多工具</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> actions
-</span></span></code></pre></div><h3 id="43-动作响应流程">4.3 动作响应流程<a hidden class="anchor" aria-hidden="true" href="#43-动作响应流程">#</a></h3>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="k">def</span> <span class="nf">response_to_actions</span><span class="p">(</span><span class="n">response</span><span class="p">:</span> <span class="n">ModelResponse</span><span class="p">,</span> <span class="n">mcp_tool_names</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Action</span><span class="p">]:</span>
+</span></span><span class="line"><span class="cl">    <span class="s2">&#34;&#34;&#34;将 LLM 响应转换为 Action 列表&#34;&#34;&#34;</span>
+</span></span><span class="line"><span class="cl">    <span class="k">for</span> <span class="n">tool_call</span> <span class="ow">in</span> <span class="n">response</span><span class="o">.</span><span class="n">tool_calls</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">        <span class="k">if</span> <span class="n">tool_call</span><span class="o">.</span><span class="n">function</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s1">&#39;bash&#39;</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">            <span class="n">action</span> <span class="o">=</span> <span class="n">CmdRunAction</span><span class="p">(</span><span class="n">command</span><span class="o">=</span><span class="n">arguments</span><span class="p">[</span><span class="s1">&#39;command&#39;</span><span class="p">],</span> <span class="o">...</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">        <span class="k">elif</span> <span class="n">tool_call</span><span class="o">.</span><span class="n">function</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s1">&#39;IPythonTool&#39;</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">            <span class="n">action</span> <span class="o">=</span> <span class="n">IPythonRunCellAction</span><span class="p">(</span><span class="n">code</span><span class="o">=</span><span class="n">arguments</span><span class="p">[</span><span class="s1">&#39;code&#39;</span><span class="p">])</span>
+</span></span><span class="line"><span class="cl">        <span class="k">elif</span> <span class="n">tool_call</span><span class="o">.</span><span class="n">function</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s1">&#39;finish&#39;</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">            <span class="n">action</span> <span class="o">=</span> <span class="n">AgentFinishAction</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">        <span class="c1"># ... 更多工具</span>
+</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="n">actions</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="43-动作响应流程">4.3 动作响应流程<a hidden class="anchor" aria-hidden="true" href="#43-动作响应流程">#</a></h3>
 <pre tabindex="0"><code>LLM 响应 (ModelResponse)
     │
     ▼
@@ -482,37 +675,78 @@ Runtime 返回 Observation
 <h3 id="51-委托机制">5.1 委托机制<a hidden class="anchor" aria-hidden="true" href="#51-委托机制">#</a></h3>
 <p>OpenHands 支持<strong>多智能体协作</strong>，通过 <code>AgentDelegateAction</code> 实现：</p>
 <p><strong>文件</strong>: <code>/home/gdw/tutorial/OpenHands/openhands/controller/agent_controller.py</code></p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">async</span> <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">start_delegate</span>(self, action: AgentDelegateAction) <span style="color:#f92672">-&gt;</span> <span style="color:#66d9ef">None</span>:
-</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;&#34;&#34;启动委托智能体处理子任务&#34;&#34;&#34;</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># 1. 创建被委托的智能体</span>
-</span></span><span style="display:flex;"><span>    agent_cls: type[Agent] <span style="color:#f92672">=</span> Agent<span style="color:#f92672">.</span>get_cls(action<span style="color:#f92672">.</span>agent)
-</span></span><span style="display:flex;"><span>    delegate_agent <span style="color:#f92672">=</span> agent_cls(config<span style="color:#f92672">=</span>agent_config, llm_registry<span style="color:#f92672">=</span>self<span style="color:#f92672">.</span>agent<span style="color:#f92672">.</span>llm_registry)
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># 2. 创建共享状态的委托状态</span>
-</span></span><span style="display:flex;"><span>    state <span style="color:#f92672">=</span> State(
-</span></span><span style="display:flex;"><span>        session_id<span style="color:#f92672">=</span>self<span style="color:#f92672">.</span>id<span style="color:#f92672">.</span>removesuffix(<span style="color:#e6db74">&#39;-delegate&#39;</span>),
-</span></span><span style="display:flex;"><span>        inputs<span style="color:#f92672">=</span>action<span style="color:#f92672">.</span>inputs <span style="color:#f92672">or</span> {},
-</span></span><span style="display:flex;"><span>        delegate_level<span style="color:#f92672">=</span>self<span style="color:#f92672">.</span>state<span style="color:#f92672">.</span>delegate_level <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span>,
-</span></span><span style="display:flex;"><span>        metrics<span style="color:#f92672">=</span>self<span style="color:#f92672">.</span>state<span style="color:#f92672">.</span>metrics,  <span style="color:#75715e"># 共享指标</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#75715e"># ...</span>
-</span></span><span style="display:flex;"><span>    )
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># 3. 创建委托控制器</span>
-</span></span><span style="display:flex;"><span>    self<span style="color:#f92672">.</span>delegate <span style="color:#f92672">=</span> AgentController(
-</span></span><span style="display:flex;"><span>        sid<span style="color:#f92672">=</span>self<span style="color:#f92672">.</span>id <span style="color:#f92672">+</span> <span style="color:#e6db74">&#39;-delegate&#39;</span>,
-</span></span><span style="display:flex;"><span>        agent<span style="color:#f92672">=</span>delegate_agent,
-</span></span><span style="display:flex;"><span>        event_stream<span style="color:#f92672">=</span>self<span style="color:#f92672">.</span>event_stream,  <span style="color:#75715e"># 共享事件流！</span>
-</span></span><span style="display:flex;"><span>        initial_state<span style="color:#f92672">=</span>state,
-</span></span><span style="display:flex;"><span>        is_delegate<span style="color:#f92672">=</span><span style="color:#66d9ef">True</span>,
-</span></span><span style="display:flex;"><span>        <span style="color:#75715e"># ...</span>
-</span></span><span style="display:flex;"><span>    )
-</span></span></code></pre></div><h3 id="52-委托动作">5.2 委托动作<a hidden class="anchor" aria-hidden="true" href="#52-委托动作">#</a></h3>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#a6e22e">@dataclass</span>
-</span></span><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">AgentDelegateAction</span>(Action):
-</span></span><span style="display:flex;"><span>    agent: str          <span style="color:#75715e"># 委托目标，如 &#39;BrowsingAgent&#39;</span>
-</span></span><span style="display:flex;"><span>    inputs: dict        <span style="color:#75715e"># 任务输入</span>
-</span></span><span style="display:flex;"><span>    action: str <span style="color:#f92672">=</span> ActionType<span style="color:#f92672">.</span>DELEGATE
-</span></span></code></pre></div><h3 id="53-多智能体通信模式">5.3 多智能体通信模式<a hidden class="anchor" aria-hidden="true" href="#53-多智能体通信模式">#</a></h3>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="k">async</span> <span class="k">def</span> <span class="nf">start_delegate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">action</span><span class="p">:</span> <span class="n">AgentDelegateAction</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">    <span class="s2">&#34;&#34;&#34;启动委托智能体处理子任务&#34;&#34;&#34;</span>
+</span></span><span class="line"><span class="cl">    <span class="c1"># 1. 创建被委托的智能体</span>
+</span></span><span class="line"><span class="cl">    <span class="n">agent_cls</span><span class="p">:</span> <span class="nb">type</span><span class="p">[</span><span class="n">Agent</span><span class="p">]</span> <span class="o">=</span> <span class="n">Agent</span><span class="o">.</span><span class="n">get_cls</span><span class="p">(</span><span class="n">action</span><span class="o">.</span><span class="n">agent</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="n">delegate_agent</span> <span class="o">=</span> <span class="n">agent_cls</span><span class="p">(</span><span class="n">config</span><span class="o">=</span><span class="n">agent_config</span><span class="p">,</span> <span class="n">llm_registry</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">agent</span><span class="o">.</span><span class="n">llm_registry</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="c1"># 2. 创建共享状态的委托状态</span>
+</span></span><span class="line"><span class="cl">    <span class="n">state</span> <span class="o">=</span> <span class="n">State</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">        <span class="n">session_id</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="o">.</span><span class="n">removesuffix</span><span class="p">(</span><span class="s1">&#39;-delegate&#39;</span><span class="p">),</span>
+</span></span><span class="line"><span class="cl">        <span class="n">inputs</span><span class="o">=</span><span class="n">action</span><span class="o">.</span><span class="n">inputs</span> <span class="ow">or</span> <span class="p">{},</span>
+</span></span><span class="line"><span class="cl">        <span class="n">delegate_level</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">delegate_level</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">        <span class="n">metrics</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">metrics</span><span class="p">,</span>  <span class="c1"># 共享指标</span>
+</span></span><span class="line"><span class="cl">        <span class="c1"># ...</span>
+</span></span><span class="line"><span class="cl">    <span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="c1"># 3. 创建委托控制器</span>
+</span></span><span class="line"><span class="cl">    <span class="bp">self</span><span class="o">.</span><span class="n">delegate</span> <span class="o">=</span> <span class="n">AgentController</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">        <span class="n">sid</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span> <span class="o">+</span> <span class="s1">&#39;-delegate&#39;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">        <span class="n">agent</span><span class="o">=</span><span class="n">delegate_agent</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">        <span class="n">event_stream</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">event_stream</span><span class="p">,</span>  <span class="c1"># 共享事件流！</span>
+</span></span><span class="line"><span class="cl">        <span class="n">initial_state</span><span class="o">=</span><span class="n">state</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">        <span class="n">is_delegate</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">        <span class="c1"># ...</span>
+</span></span><span class="line"><span class="cl">    <span class="p">)</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="52-委托动作">5.2 委托动作<a hidden class="anchor" aria-hidden="true" href="#52-委托动作">#</a></h3>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="nd">@dataclass</span>
+</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">AgentDelegateAction</span><span class="p">(</span><span class="n">Action</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">    <span class="n">agent</span><span class="p">:</span> <span class="nb">str</span>          <span class="c1"># 委托目标，如 &#39;BrowsingAgent&#39;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">inputs</span><span class="p">:</span> <span class="nb">dict</span>        <span class="c1"># 任务输入</span>
+</span></span><span class="line"><span class="cl">    <span class="n">action</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">ActionType</span><span class="o">.</span><span class="n">DELEGATE</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="53-多智能体通信模式">5.3 多智能体通信模式<a hidden class="anchor" aria-hidden="true" href="#53-多智能体通信模式">#</a></h3>
 <p><strong>共享 EventStream 模式</strong>：</p>
 <pre tabindex="0"><code>┌──────────────────────────────────────────────────────────────┐
 │                      EventStream                            │
@@ -535,21 +769,41 @@ Runtime 返回 Observation
 <li>委托结果通过 <code>AgentDelegateObservation</code> 返回</li>
 </ol>
 <h3 id="54-委托结束流程">5.4 委托结束流程<a hidden class="anchor" aria-hidden="true" href="#54-委托结束流程">#</a></h3>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">end_delegate</span>(self) <span style="color:#f92672">-&gt;</span> <span style="color:#66d9ef">None</span>:
-</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># 从委托者复制迭代计数</span>
-</span></span><span style="display:flex;"><span>    self<span style="color:#f92672">.</span>state<span style="color:#f92672">.</span>iteration_flag<span style="color:#f92672">.</span>current_value <span style="color:#f92672">=</span> (
-</span></span><span style="display:flex;"><span>        self<span style="color:#f92672">.</span>delegate<span style="color:#f92672">.</span>state<span style="color:#f92672">.</span>iteration_flag<span style="color:#f92672">.</span>current_value
-</span></span><span style="display:flex;"><span>    )
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># 发送委托结果观察</span>
-</span></span><span style="display:flex;"><span>    obs <span style="color:#f92672">=</span> AgentDelegateObservation(
-</span></span><span style="display:flex;"><span>        outputs<span style="color:#f92672">=</span>delegate_outputs,
-</span></span><span style="display:flex;"><span>        content<span style="color:#f92672">=</span>content
-</span></span><span style="display:flex;"><span>    )
-</span></span><span style="display:flex;"><span>    self<span style="color:#f92672">.</span>event_stream<span style="color:#f92672">.</span>add_event(obs, EventSource<span style="color:#f92672">.</span>AGENT)
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span>    self<span style="color:#f92672">.</span>delegate <span style="color:#f92672">=</span> <span style="color:#66d9ef">None</span>
-</span></span></code></pre></div><h3 id="55-多智能体设计模式">5.5 多智能体设计模式<a hidden class="anchor" aria-hidden="true" href="#55-多智能体设计模式">#</a></h3>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="k">def</span> <span class="nf">end_delegate</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">    <span class="c1"># 从委托者复制迭代计数</span>
+</span></span><span class="line"><span class="cl">    <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">iteration_flag</span><span class="o">.</span><span class="n">current_value</span> <span class="o">=</span> <span class="p">(</span>
+</span></span><span class="line"><span class="cl">        <span class="bp">self</span><span class="o">.</span><span class="n">delegate</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">iteration_flag</span><span class="o">.</span><span class="n">current_value</span>
+</span></span><span class="line"><span class="cl">    <span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="c1"># 发送委托结果观察</span>
+</span></span><span class="line"><span class="cl">    <span class="n">obs</span> <span class="o">=</span> <span class="n">AgentDelegateObservation</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">        <span class="n">outputs</span><span class="o">=</span><span class="n">delegate_outputs</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">        <span class="n">content</span><span class="o">=</span><span class="n">content</span>
+</span></span><span class="line"><span class="cl">    <span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="bp">self</span><span class="o">.</span><span class="n">event_stream</span><span class="o">.</span><span class="n">add_event</span><span class="p">(</span><span class="n">obs</span><span class="p">,</span> <span class="n">EventSource</span><span class="o">.</span><span class="n">AGENT</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="bp">self</span><span class="o">.</span><span class="n">delegate</span> <span class="o">=</span> <span class="kc">None</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="55-多智能体设计模式">5.5 多智能体设计模式<a hidden class="anchor" aria-hidden="true" href="#55-多智能体设计模式">#</a></h3>
 <table>
   <thead>
       <tr>
@@ -614,16 +868,31 @@ Runtime 返回 Observation
   </tbody>
 </table>
 <h3 id="63-skill-使用方式">6.3 Skill 使用方式<a hidden class="anchor" aria-hidden="true" href="#63-skill-使用方式">#</a></h3>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#75715e"># file_ops.py</span>
-</span></span><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">open_file</span>(path: str, line_number: int <span style="color:#f92672">|</span> <span style="color:#66d9ef">None</span> <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span>, context_lines: int <span style="color:#f92672">=</span> <span style="color:#ae81ff">100</span>) <span style="color:#f92672">-&gt;</span> <span style="color:#66d9ef">None</span>:
-</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;&#34;&#34;打开文件并可选定位到指定行&#34;&#34;&#34;</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">global</span> CURRENT_FILE, CURRENT_LINE, WINDOW
-</span></span><span style="display:flex;"><span>    CURRENT_FILE <span style="color:#f92672">=</span> os<span style="color:#f92672">.</span>path<span style="color:#f92672">.</span>abspath(path)
-</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># ... 实现</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#75715e"># Agent 通过 IPython 调用</span>
-</span></span><span style="display:flex;"><span>action <span style="color:#f92672">=</span> IPythonRunCellAction(code<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;open_file(&#34;src/main.py&#34;, line_number=50)&#39;</span>)
-</span></span></code></pre></div><h3 id="64-skill-与-tool-的区别">6.4 Skill 与 Tool 的区别<a hidden class="anchor" aria-hidden="true" href="#64-skill-与-tool-的区别">#</a></h3>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="c1"># file_ops.py</span>
+</span></span><span class="line"><span class="cl"><span class="k">def</span> <span class="nf">open_file</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">line_number</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span> <span class="n">context_lines</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">100</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">    <span class="s2">&#34;&#34;&#34;打开文件并可选定位到指定行&#34;&#34;&#34;</span>
+</span></span><span class="line"><span class="cl">    <span class="k">global</span> <span class="n">CURRENT_FILE</span><span class="p">,</span> <span class="n">CURRENT_LINE</span><span class="p">,</span> <span class="n">WINDOW</span>
+</span></span><span class="line"><span class="cl">    <span class="n">CURRENT_FILE</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="c1"># ... 实现</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># Agent 通过 IPython 调用</span>
+</span></span><span class="line"><span class="cl"><span class="n">action</span> <span class="o">=</span> <span class="n">IPythonRunCellAction</span><span class="p">(</span><span class="n">code</span><span class="o">=</span><span class="s1">&#39;open_file(&#34;src/main.py&#34;, line_number=50)&#39;</span><span class="p">)</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="64-skill-与-tool-的区别">6.4 Skill 与 Tool 的区别<a hidden class="anchor" aria-hidden="true" href="#64-skill-与-tool-的区别">#</a></h3>
 <table>
   <thead>
       <tr>
@@ -661,12 +930,23 @@ Runtime 返回 Observation
 <p><strong>MCP (Model Context Protocol)</strong> 是一种扩展智能体工具能力的协议。</p>
 <p><strong>文件</strong>: <code>/home/gdw/tutorial/OpenHands/openhands/mcp/</code></p>
 <h3 id="72-mcpclient">7.2 MCPClient<a hidden class="anchor" aria-hidden="true" href="#72-mcpclient">#</a></h3>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">MCPClient</span>(BaseModel):
-</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;&#34;&#34;连接到 MCP 服务器的工具集合&#34;&#34;&#34;</span>
-</span></span><span style="display:flex;"><span>    client: Optional[Client] <span style="color:#f92672">=</span> <span style="color:#66d9ef">None</span>
-</span></span><span style="display:flex;"><span>    tools: list[MCPClientTool] <span style="color:#f92672">=</span> Field(default_factory<span style="color:#f92672">=</span>list)
-</span></span><span style="display:flex;"><span>    tool_map: dict[str, MCPClientTool] <span style="color:#f92672">=</span> Field(default_factory<span style="color:#f92672">=</span>dict)
-</span></span></code></pre></div><h3 id="73-mcp-传输类型">7.3 MCP 传输类型<a hidden class="anchor" aria-hidden="true" href="#73-mcp-传输类型">#</a></h3>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">MCPClient</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">    <span class="s2">&#34;&#34;&#34;连接到 MCP 服务器的工具集合&#34;&#34;&#34;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">client</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Client</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+</span></span><span class="line"><span class="cl">    <span class="n">tools</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">MCPClientTool</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="n">tool_map</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">MCPClientTool</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">dict</span><span class="p">)</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="73-mcp-传输类型">7.3 MCP 传输类型<a hidden class="anchor" aria-hidden="true" href="#73-mcp-传输类型">#</a></h3>
 <table>
   <thead>
       <tr>
@@ -695,18 +975,40 @@ Runtime 返回 Observation
 </table>
 <h3 id="74-mcpaction">7.4 MCPAction<a hidden class="anchor" aria-hidden="true" href="#74-mcpaction">#</a></h3>
 <p><strong>文件</strong>: <code>/home/gdw/tutorial/OpenHands/openhands/events/action/mcp.py</code></p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#a6e22e">@dataclass</span>
-</span></span><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">MCPAction</span>(Action):
-</span></span><span style="display:flex;"><span>    name: str                              <span style="color:#75715e"># MCP 工具名称</span>
-</span></span><span style="display:flex;"><span>    arguments: dict[str, Any] <span style="color:#f92672">=</span> field(default_factory<span style="color:#f92672">=</span>dict)
-</span></span><span style="display:flex;"><span>    thought: str <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;&#39;</span>
-</span></span><span style="display:flex;"><span>    action: str <span style="color:#f92672">=</span> ActionType<span style="color:#f92672">.</span>MCP
-</span></span><span style="display:flex;"><span>    runnable: ClassVar[bool] <span style="color:#f92672">=</span> <span style="color:#66d9ef">True</span>
-</span></span><span style="display:flex;"><span>    security_risk: ActionSecurityRisk <span style="color:#f92672">=</span> ActionSecurityRisk<span style="color:#f92672">.</span>UNKNOWN
-</span></span></code></pre></div><h3 id="75-mcp-工具添加到-agent">7.5 MCP 工具添加到 Agent<a hidden class="anchor" aria-hidden="true" href="#75-mcp-工具添加到-agent">#</a></h3>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#75715e"># Agent 初始化时</span>
-</span></span><span style="display:flex;"><span>self<span style="color:#f92672">.</span>set_mcp_tools(mcp_tools)  <span style="color:#75715e"># 从配置加载 MCP 工具</span>
-</span></span></code></pre></div><hr>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="nd">@dataclass</span>
+</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">MCPAction</span><span class="p">(</span><span class="n">Action</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>                              <span class="c1"># MCP 工具名称</span>
+</span></span><span class="line"><span class="cl">    <span class="n">arguments</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">dict</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="n">thought</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">action</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">ActionType</span><span class="o">.</span><span class="n">MCP</span>
+</span></span><span class="line"><span class="cl">    <span class="n">runnable</span><span class="p">:</span> <span class="n">ClassVar</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+</span></span><span class="line"><span class="cl">    <span class="n">security_risk</span><span class="p">:</span> <span class="n">ActionSecurityRisk</span> <span class="o">=</span> <span class="n">ActionSecurityRisk</span><span class="o">.</span><span class="n">UNKNOWN</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="75-mcp-工具添加到-agent">7.5 MCP 工具添加到 Agent<a hidden class="anchor" aria-hidden="true" href="#75-mcp-工具添加到-agent">#</a></h3>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="c1"># Agent 初始化时</span>
+</span></span><span class="line"><span class="cl"><span class="bp">self</span><span class="o">.</span><span class="n">set_mcp_tools</span><span class="p">(</span><span class="n">mcp_tools</span><span class="p">)</span>  <span class="c1"># 从配置加载 MCP 工具</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><hr>
 <h2 id="8-microagent-微智能体">8. Microagent 微智能体<a hidden class="anchor" aria-hidden="true" href="#8-microagent-微智能体">#</a></h2>
 <h3 id="81-概述">8.1 概述<a hidden class="anchor" aria-hidden="true" href="#81-概述">#</a></h3>
 <p><strong>Microagent</strong> 是一种轻量级的<strong>专门知识智能体</strong>，可在对话期间被触发。</p>
@@ -739,37 +1041,78 @@ Runtime 返回 Observation
   </tbody>
 </table>
 <h3 id="83-基类结构">8.3 基类结构<a hidden class="anchor" aria-hidden="true" href="#83-基类结构">#</a></h3>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">BaseMicroagent</span>(BaseModel):
-</span></span><span style="display:flex;"><span>    name: str
-</span></span><span style="display:flex;"><span>    content: str
-</span></span><span style="display:flex;"><span>    metadata: MicroagentMetadata
-</span></span><span style="display:flex;"><span>    source: str
-</span></span><span style="display:flex;"><span>    type: MicroagentType
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">KnowledgeMicroagent</span>(BaseMicroagent):
-</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;&#34;&#34;通过关键词触发&#34;&#34;&#34;</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">match_trigger</span>(self, message: str) <span style="color:#f92672">-&gt;</span> str <span style="color:#f92672">|</span> <span style="color:#66d9ef">None</span>:
-</span></span><span style="display:flex;"><span>        message <span style="color:#f92672">=</span> message<span style="color:#f92672">.</span>lower()
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">for</span> trigger <span style="color:#f92672">in</span> self<span style="color:#f92672">.</span>triggers:
-</span></span><span style="display:flex;"><span>            <span style="color:#66d9ef">if</span> trigger<span style="color:#f92672">.</span>lower() <span style="color:#f92672">in</span> message:
-</span></span><span style="display:flex;"><span>                <span style="color:#66d9ef">return</span> trigger
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> <span style="color:#66d9ef">None</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">TaskMicroagent</span>(KnowledgeMicroagent):
-</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;&#34;&#34;通过 /</span><span style="color:#e6db74">{name}</span><span style="color:#e6db74"> 触发，需要用户输入&#34;&#34;&#34;</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">requires_user_input</span>(self) <span style="color:#f92672">-&gt;</span> bool:
-</span></span><span style="display:flex;"><span>        variables <span style="color:#f92672">=</span> self<span style="color:#f92672">.</span>extract_variables(self<span style="color:#f92672">.</span>content)
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">return</span> len(variables) <span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">0</span>
-</span></span></code></pre></div><h3 id="84-microagentmetadata">8.4 MicroagentMetadata<a hidden class="anchor" aria-hidden="true" href="#84-microagentmetadata">#</a></h3>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">MicroagentMetadata</span>(BaseModel):
-</span></span><span style="display:flex;"><span>    name: str <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;default&#39;</span>
-</span></span><span style="display:flex;"><span>    type: MicroagentType <span style="color:#f92672">=</span> MicroagentType<span style="color:#f92672">.</span>REPO_KNOWLEDGE
-</span></span><span style="display:flex;"><span>    version: str <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;1.0.0&#39;</span>
-</span></span><span style="display:flex;"><span>    agent: str <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;CodeActAgent&#39;</span>
-</span></span><span style="display:flex;"><span>    triggers: list[str] <span style="color:#f92672">=</span> []       <span style="color:#75715e"># KNOWLEDGE 类型的关键词</span>
-</span></span><span style="display:flex;"><span>    inputs: list[InputMetadata] <span style="color:#f92672">=</span> []  <span style="color:#75715e"># TASK 类型的输入</span>
-</span></span><span style="display:flex;"><span>    mcp_tools: MCPConfig <span style="color:#f92672">|</span> <span style="color:#66d9ef">None</span> <span style="color:#f92672">=</span> <span style="color:#66d9ef">None</span>  <span style="color:#75715e"># 额外的 MCP 工具</span>
-</span></span></code></pre></div><hr>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">BaseMicroagent</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
+</span></span><span class="line"><span class="cl">    <span class="n">content</span><span class="p">:</span> <span class="nb">str</span>
+</span></span><span class="line"><span class="cl">    <span class="n">metadata</span><span class="p">:</span> <span class="n">MicroagentMetadata</span>
+</span></span><span class="line"><span class="cl">    <span class="n">source</span><span class="p">:</span> <span class="nb">str</span>
+</span></span><span class="line"><span class="cl">    <span class="nb">type</span><span class="p">:</span> <span class="n">MicroagentType</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">KnowledgeMicroagent</span><span class="p">(</span><span class="n">BaseMicroagent</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">    <span class="s2">&#34;&#34;&#34;通过关键词触发&#34;&#34;&#34;</span>
+</span></span><span class="line"><span class="cl">    <span class="k">def</span> <span class="nf">match_trigger</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">        <span class="n">message</span> <span class="o">=</span> <span class="n">message</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">        <span class="k">for</span> <span class="n">trigger</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">triggers</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">            <span class="k">if</span> <span class="n">trigger</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="n">message</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">                <span class="k">return</span> <span class="n">trigger</span>
+</span></span><span class="line"><span class="cl">        <span class="k">return</span> <span class="kc">None</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">TaskMicroagent</span><span class="p">(</span><span class="n">KnowledgeMicroagent</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">    <span class="s2">&#34;&#34;&#34;通过 /</span><span class="si">{name}</span><span class="s2"> 触发，需要用户输入&#34;&#34;&#34;</span>
+</span></span><span class="line"><span class="cl">    <span class="k">def</span> <span class="nf">requires_user_input</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">        <span class="n">variables</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">extract_variables</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">content</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="n">variables</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="84-microagentmetadata">8.4 MicroagentMetadata<a hidden class="anchor" aria-hidden="true" href="#84-microagentmetadata">#</a></h3>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">MicroagentMetadata</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;default&#39;</span>
+</span></span><span class="line"><span class="cl">    <span class="nb">type</span><span class="p">:</span> <span class="n">MicroagentType</span> <span class="o">=</span> <span class="n">MicroagentType</span><span class="o">.</span><span class="n">REPO_KNOWLEDGE</span>
+</span></span><span class="line"><span class="cl">    <span class="n">version</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;1.0.0&#39;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">agent</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;CodeActAgent&#39;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">triggers</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>       <span class="c1"># KNOWLEDGE 类型的关键词</span>
+</span></span><span class="line"><span class="cl">    <span class="n">inputs</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">InputMetadata</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>  <span class="c1"># TASK 类型的输入</span>
+</span></span><span class="line"><span class="cl">    <span class="n">mcp_tools</span><span class="p">:</span> <span class="n">MCPConfig</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># 额外的 MCP 工具</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><hr>
 <h2 id="9-架构图">9. 架构图<a hidden class="anchor" aria-hidden="true" href="#9-架构图">#</a></h2>
 <h3 id="91-agent-类层次结构">9.1 Agent 类层次结构<a hidden class="anchor" aria-hidden="true" href="#91-agent-类层次结构">#</a></h3>
 <pre tabindex="0"><code>                    &lt;&lt;ABC&gt;&gt;
@@ -910,20 +1253,39 @@ Observation → AgentController → Agent.step()
 <li>返回 Observation</li>
 </ul>
 <p><strong>示例</strong>：</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#75715e"># 工具定义</span>
-</span></span><span style="display:flex;"><span>bash_tool <span style="color:#f92672">=</span> ChatCompletionToolParam(
-</span></span><span style="display:flex;"><span>    type<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;function&#39;</span>,
-</span></span><span style="display:flex;"><span>    function<span style="color:#f92672">=</span>{
-</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#39;name&#39;</span>: <span style="color:#e6db74">&#39;bash&#39;</span>,
-</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#39;description&#39;</span>: <span style="color:#e6db74">&#39;Execute bash commands&#39;</span>,
-</span></span><span style="display:flex;"><span>        <span style="color:#e6db74">&#39;parameters&#39;</span>: {<span style="color:#f92672">...</span>}
-</span></span><span style="display:flex;"><span>    }
-</span></span><span style="display:flex;"><span>)
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#75715e"># LLM 响应解析</span>
-</span></span><span style="display:flex;"><span><span style="color:#66d9ef">if</span> tool_call<span style="color:#f92672">.</span>function<span style="color:#f92672">.</span>name <span style="color:#f92672">==</span> <span style="color:#e6db74">&#39;bash&#39;</span>:
-</span></span><span style="display:flex;"><span>    action <span style="color:#f92672">=</span> CmdRunAction(command<span style="color:#f92672">=</span>arguments[<span style="color:#e6db74">&#39;command&#39;</span>])
-</span></span></code></pre></div></blockquote>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="c1"># 工具定义</span>
+</span></span><span class="line"><span class="cl"><span class="n">bash_tool</span> <span class="o">=</span> <span class="n">ChatCompletionToolParam</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="nb">type</span><span class="o">=</span><span class="s1">&#39;function&#39;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="n">function</span><span class="o">=</span><span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;bash&#39;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">        <span class="s1">&#39;description&#39;</span><span class="p">:</span> <span class="s1">&#39;Execute bash commands&#39;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">        <span class="s1">&#39;parameters&#39;</span><span class="p">:</span> <span class="p">{</span><span class="o">...</span><span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># LLM 响应解析</span>
+</span></span><span class="line"><span class="cl"><span class="k">if</span> <span class="n">tool_call</span><span class="o">.</span><span class="n">function</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s1">&#39;bash&#39;</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">    <span class="n">action</span> <span class="o">=</span> <span class="n">CmdRunAction</span><span class="p">(</span><span class="n">command</span><span class="o">=</span><span class="n">arguments</span><span class="p">[</span><span class="s1">&#39;command&#39;</span><span class="p">])</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div></blockquote>
 <hr>
 <h3 id="q4-openhands-如何实现多智能体协作">Q4: OpenHands 如何实现多智能体协作？<a hidden class="anchor" aria-hidden="true" href="#q4-openhands-如何实现多智能体协作">#</a></h3>
 <p><strong>参考答案</strong>：</p>
@@ -1008,8 +1370,15 @@ Observation → AgentController → Agent.step()
 <li><strong>传输类型</strong>：支持 Stdio、SSE、HTTP 等</li>
 </ol>
 <p><strong>添加 MCP 工具到 Agent</strong>：</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>agent<span style="color:#f92672">.</span>set_mcp_tools(mcp_tools)  <span style="color:#75715e"># 从配置加载</span>
-</span></span></code></pre></div><p><strong>MCP 工具执行流程</strong>：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="n">agent</span><span class="o">.</span><span class="n">set_mcp_tools</span><span class="p">(</span><span class="n">mcp_tools</span><span class="p">)</span>  <span class="c1"># 从配置加载</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>MCP 工具执行流程</strong>：</p>
 <ol>
 <li>LLM 选择 MCP 工具</li>
 <li>生成 MCPAction</li>
@@ -1035,14 +1404,27 @@ Observation → AgentController → Agent.step()
 <li>特定任务执行（TASK）</li>
 </ul>
 <p><strong>触发示例</strong>：</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#75715e"># KNOWLEDGE 类型</span>
-</span></span><span style="display:flex;"><span>triggers <span style="color:#f92672">=</span> [<span style="color:#e6db74">&#39;python&#39;</span>, <span style="color:#e6db74">&#39;django&#39;</span>]
-</span></span><span style="display:flex;"><span><span style="color:#66d9ef">if</span> <span style="color:#e6db74">&#39;python&#39;</span> <span style="color:#f92672">in</span> user_message:
-</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># 注入 Python 最佳实践</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#75715e"># TASK 类型</span>
-</span></span><span style="display:flex;"><span><span style="color:#f92672">/</span>deploy <span style="color:#f92672">--</span>env<span style="color:#f92672">=</span>production  <span style="color:#75715e"># 触发部署任务</span>
-</span></span></code></pre></div></blockquote>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="c1"># KNOWLEDGE 类型</span>
+</span></span><span class="line"><span class="cl"><span class="n">triggers</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;python&#39;</span><span class="p">,</span> <span class="s1">&#39;django&#39;</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl"><span class="k">if</span> <span class="s1">&#39;python&#39;</span> <span class="ow">in</span> <span class="n">user_message</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">    <span class="c1"># 注入 Python 最佳实践</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># TASK 类型</span>
+</span></span><span class="line"><span class="cl"><span class="o">/</span><span class="n">deploy</span> <span class="o">--</span><span class="n">env</span><span class="o">=</span><span class="n">production</span>  <span class="c1"># 触发部署任务</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div></blockquote>
 <hr>
 <h3 id="q8-如何自定义开发一个新的-agent">Q8: 如何自定义开发一个新的 Agent？<a hidden class="anchor" aria-hidden="true" href="#q8-如何自定义开发一个新的-agent">#</a></h3>
 <p><strong>参考答案</strong>：</p>
@@ -1051,27 +1433,64 @@ Observation → AgentController → Agent.step()
 <ol>
 <li><strong>继承 Agent 基类</strong></li>
 </ol>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#f92672">from</span> openhands.controller.agent <span style="color:#f92672">import</span> Agent
-</span></span><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">MyAgent</span>(Agent):
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">def</span> <span style="color:#a6e22e">step</span>(self, state: State) <span style="color:#f92672">-&gt;</span> Action:
-</span></span><span style="display:flex;"><span>        <span style="color:#75715e"># 实现决策逻辑</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#66d9ef">pass</span>
-</span></span></code></pre></div><ol start="2">
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="kn">from</span> <span class="nn">openhands.controller.agent</span> <span class="kn">import</span> <span class="n">Agent</span>
+</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">MyAgent</span><span class="p">(</span><span class="n">Agent</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">    <span class="k">def</span> <span class="nf">step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">:</span> <span class="n">State</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Action</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">        <span class="c1"># 实现决策逻辑</span>
+</span></span><span class="line"><span class="cl">        <span class="k">pass</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><ol start="2">
 <li><strong>注册 Agent</strong></li>
 </ol>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>Agent<span style="color:#f92672">.</span>register(<span style="color:#e6db74">&#39;my_agent&#39;</span>, MyAgent)
-</span></span></code></pre></div><ol start="3">
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="n">Agent</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="s1">&#39;my_agent&#39;</span><span class="p">,</span> <span class="n">MyAgent</span><span class="p">)</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><ol start="3">
 <li><strong>配置使用</strong></li>
 </ol>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#75715e"># config.toml</span>
-</span></span><span style="display:flex;"><span>[agent]
-</span></span><span style="display:flex;"><span>name <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;my_agent&#34;</span>
-</span></span></code></pre></div><p><strong>可选：自定义工具</strong></p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">_get_tools</span>(self):
-</span></span><span style="display:flex;"><span>    tools <span style="color:#f92672">=</span> super()<span style="color:#f92672">.</span>_get_tools()
-</span></span><span style="display:flex;"><span>    tools<span style="color:#f92672">.</span>append(my_custom_tool)
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> tools
-</span></span></code></pre></div></blockquote>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="c1"># config.toml</span>
+</span></span><span class="line"><span class="cl"><span class="p">[</span><span class="n">agent</span><span class="p">]</span>
+</span></span><span class="line"><span class="cl"><span class="n">name</span> <span class="o">=</span> <span class="s2">&#34;my_agent&#34;</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>可选：自定义工具</strong></p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="k">def</span> <span class="nf">_get_tools</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">    <span class="n">tools</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">_get_tools</span><span class="p">()</span>
+</span></span><span class="line"><span class="cl">    <span class="n">tools</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">my_custom_tool</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="n">tools</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div></blockquote>
 <hr>
 <h3 id="q9-agent-的类注册模式有什么好处">Q9: Agent 的类注册模式有什么好处？<a hidden class="anchor" aria-hidden="true" href="#q9-agent-的类注册模式有什么好处">#</a></h3>
 <p><strong>参考答案</strong>：</p>
@@ -1085,15 +1504,29 @@ Observation → AgentController → Agent.step()
 <li><strong>配置驱动</strong>：通过配置指定 Agent 类型</li>
 </ol>
 <p><strong>实现</strong>：</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#75715e"># 框架代码</span>
-</span></span><span style="display:flex;"><span>agent_cls <span style="color:#f92672">=</span> Agent<span style="color:#f92672">.</span>get_cls(config<span style="color:#f92672">.</span>name)
-</span></span><span style="display:flex;"><span>agent <span style="color:#f92672">=</span> agent_cls(config, llm_registry)
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#75715e"># 插件代码</span>
-</span></span><span style="display:flex;"><span><span style="color:#a6e22e">@register</span>(<span style="color:#e6db74">&#39;my_agent&#39;</span>)
-</span></span><span style="display:flex;"><span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">MyAgent</span>(Agent):
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">pass</span>
-</span></span></code></pre></div></blockquote>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="c1"># 框架代码</span>
+</span></span><span class="line"><span class="cl"><span class="n">agent_cls</span> <span class="o">=</span> <span class="n">Agent</span><span class="o">.</span><span class="n">get_cls</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="n">agent</span> <span class="o">=</span> <span class="n">agent_cls</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">llm_registry</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1"># 插件代码</span>
+</span></span><span class="line"><span class="cl"><span class="nd">@register</span><span class="p">(</span><span class="s1">&#39;my_agent&#39;</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="k">class</span> <span class="nc">MyAgent</span><span class="p">(</span><span class="n">Agent</span><span class="p">):</span>
+</span></span><span class="line"><span class="cl">    <span class="k">pass</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div></blockquote>
 <hr>
 <h3 id="q10-openhands-的工具有哪些安全考虑">Q10: OpenHands 的工具有哪些安全考虑？<a hidden class="anchor" aria-hidden="true" href="#q10-openhands-的工具有哪些安全考虑">#</a></h3>
 <p><strong>参考答案</strong>：</p>
@@ -1115,12 +1548,23 @@ Observation → AgentController → Agent.step()
 <li>敏感信息在存储前被替换</li>
 </ul>
 <p><strong>配置示例</strong>：</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#75715e"># 高风险动作需要确认</span>
-</span></span><span style="display:flex;"><span>CmdRunAction(
-</span></span><span style="display:flex;"><span>    command<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;rm -rf /&#39;</span>,
-</span></span><span style="display:flex;"><span>    confirmation_state<span style="color:#f92672">=</span>ActionConfirmationStatus<span style="color:#f92672">.</span>REQUIRE_CONFIRMATION
-</span></span><span style="display:flex;"><span>)
-</span></span></code></pre></div></blockquote>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-python" data-lang="python"><span class="line"><span class="cl"><span class="c1"># 高风险动作需要确认</span>
+</span></span><span class="line"><span class="cl"><span class="n">CmdRunAction</span><span class="p">(</span>
+</span></span><span class="line"><span class="cl">    <span class="n">command</span><span class="o">=</span><span class="s1">&#39;rm -rf /&#39;</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">    <span class="n">confirmation_state</span><span class="o">=</span><span class="n">ActionConfirmationStatus</span><span class="o">.</span><span class="n">REQUIRE_CONFIRMATION</span>
+</span></span><span class="line"><span class="cl"><span class="p">)</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div></blockquote>
 
 
   </div>
