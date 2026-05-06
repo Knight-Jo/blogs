@@ -10,7 +10,7 @@
 <meta name="description" content="Posts - My New Hugo Project">
 <meta name="author" content="">
 <link rel="canonical" href="http://localhost:1313/posts/">
-<link crossorigin="anonymous" href="/assets/css/stylesheet.199042e659bc7245f5609d333d6c044eb554a0640849bb874e1dff8eb0f57209.css" integrity="sha256-GZBC5lm8ckX1YJ0zPWwETrVUoGQISbuHTh3/jrD1cgk=" rel="preload stylesheet" as="style">
+<link crossorigin="anonymous" href="/assets/css/stylesheet.d45eeeff94483f596e2cdae81ebc5a475be82161bcd8fde478ceea429cc27b7b.css" integrity="sha256-1F7u/5RIP1luLNroHrxaR1voIWG82P3keM7qQpzCe3s=" rel="preload stylesheet" as="style">
 <link rel="icon" href="http://localhost:1313/favicon.ico">
 <link rel="icon" type="image/png" sizes="16x16" href="http://localhost:1313/favicon-16x16.png">
 <link rel="icon" type="image/png" sizes="32x32" href="http://localhost:1313/favicon-32x32.png">
@@ -52,12 +52,6 @@
             }
         }
 
-        @media (prefers-color-scheme: light) {
-            .list::-webkit-scrollbar-thumb {
-                border-color: var(--code-bg);
-            }
-        }
-
     </style>
 </noscript>
 <script>
@@ -75,17 +69,17 @@
 </head>
 <body class="list" id="top">
     <header class="header">
-    <nav class="nav">
+    <nav class="header-nav">
         <div class="logo">
             <a href="http://localhost:1313/" accesskey="h" title="My New Hugo Project (Alt + H)">My New Hugo Project</a>
             <div class="logo-switches">
-                <button id="theme-toggle" accesskey="t" title="(Alt + T)" aria-label="Toggle theme">
-                    <svg id="moon" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                <button id="theme-toggle" class="theme-toggle" accesskey="t" title="(Alt + T)" aria-label="Toggle theme">
+                    <svg class="moon" xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24"
                         fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                         stroke-linejoin="round">
                         <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
                     </svg>
-                    <svg id="sun" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                    <svg class="sun" xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24"
                         fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                         stroke-linejoin="round">
                         <circle cx="12" cy="12" r="5"></circle>
@@ -101,7 +95,7 @@
                 </button>
             </div>
         </div>
-        <ul id="menu">
+        <ul id="menu" class="menu">
         </ul>
     </nav>
 </header>
@@ -128,7 +122,9 @@
 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 // 调用此函数解决前端把LOG_XXX&lt;&lt;&#34;...&#34;传递给后端，后端再将日志消息写入日志文件 void AsyncLogging::append(const char *logline, int len) { // - 进入临界区，保护共享的缓冲指针和队列。 // - 这里的锁很短，只包含内存操作，所以开销可控。 std::lock_guard&lt;std::mutex&gt; lg(mutex_); // 缓冲区剩余的空间足够写入 if (currentBuffer_-&gt;avail() &gt; static_cast&lt;size_t&gt;(len)) { // - 检查当前大缓冲是否还有足够空间。 // - 如果能放下，就直接把日志追加进去（纯内存拷贝）。 currentBuffer_-&gt;append(logline, len); } else { // - 如果放不下，说明当前缓冲“满了”。 // - 把这个满缓冲移动进队列，交给后端写线程统一写盘。 buffers_.push_back(std::move(currentBuffer_)); if (nextBuffer_) { // - 尝试用“备用缓冲”顶上来继续写。 // - 这样前端可以立刻继续写日志，不需要等待后端写盘。 currentBuffer_ = std::move(nextBuffer_); } else { currentBuffer_.reset(new LargeBuffer); } currentBuffer_-&gt;append(logline, len); // - 通知后端写线程：队列里有可写数据了。 // - 后端线程被唤醒后会批量写盘，提高吞吐。 cond_.notify_one(); } } 锁开销只做内存操作，不写盘 使用缓冲区切换，保证性能相对稳定 后台线程写逻辑 后端线程通过交换缓冲和批量写盘实现高吞吐， 同时把锁的持有时间压缩到最短，保证前端线程几乎只做内存操作。
 ...</p>
   </div>
-  <footer class="entry-footer"><span title='2026-05-04 15:19:33 +0800 CST'>May 4, 2026</span></footer>
+  <footer class="entry-footer">
+
+<span title='2026-05-04 15:19:33 +0800 CST'>May 4, 2026</span></footer>
   <a class="entry-link" aria-label="post link to Async_logger" href="http://localhost:1313/posts/async_logger/"></a>
 </article>
 
@@ -142,7 +138,9 @@
 OpenHands 能做什么？ 自动化代码开发：编写、修改、重构代码 Bug 修复：分析和修复代码问题 代码审查：审查 Pull Request 自动化测试：运行和编写测试 技术调研：搜索文档、阅读代码库 发布准备：提交代码、创建 PR 应用场景 场景 说明 本地开发 通过 CLI 或 GUI 与 OpenHands 交互 云端服务 托管在云端的服务，支持 Slack、Jira 集成 企业部署 支持 Kubernetes 私有化部署 SDK 集成 通过 Python SDK 构建自己的 AI 应用 系统架构 整体架构图 ┌─────────────────────────────────────────────────────────────────┐ │ 用户界面层 │ │ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ │ │ │ CLI │ │ Web GUI │ │ Slack │ │ SDK │ │ │ └────┬─────┘ └────┬─────┘ └────┬─────┘ └────┬─────┘ │ └───────┼─────────────┼─────────────┼─────────────┼───────────────┘ │ │ │ │ v v v v ┌─────────────────────────────────────────────────────────────────┐ │ 服务层 (App Server) │ │ ┌──────────────────────────────────────────────────────────┐ │ │ │ Conversation Manager (会话管理) │ │ │ └──────────────────────────────────────────────────────────┘ │ │ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ │ │ │ Sandbox │ │ Event │ │ User │ │ │ │ Service │ │ Service │ │ Service │ │ │ └──────┬──────┘ └──────┬──────┘ └─────────────┘ │ └─────────┼────────────────┼──────────────────────────────────────┘ │ │ v v ┌─────────────────────────────────────────────────────────────────┐ │ 智能体层 (Agent Core) │ │ ┌──────────────────────────────────────────────────────────┐ │ │ │ AgentController │ │ │ │ (智能体控制器) │ │ │ └──────────────────────────────────────────────────────────┘ │ │ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ │ │ │ Agent │ │ LLM │ │ Event │ │ │ │ (智能体) │ │ (大模型) │ │ Stream │ │ │ └──────┬──────┘ └──────┬──────┘ └──────┬──────┘ │ └─────────┼────────────────┼────────────────┼─────────────────────┘ │ │ │ v v v ┌─────────────────────────────────────────────────────────────────┐ │ 运行时层 (Runtime) │ │ ┌──────────────────────────────────────────────────────────┐ │ │ │ Action Execution Server │ │ │ │ (动作执行服务器) │ │ │ └──────────────────────────────────────────────────────────┘ │ │ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ │ │ │ Docker │ │ IPython │ │ Browser │ │ │ │ (容器) │ │ (代码执行) │ │ (浏览) │ │ │ └─────────────┘ └─────────────┘ └─────────────┘ │ └─────────────────────────────────────────────────────────────────┘ 核心组件 1. 智能体 (Agent) 智能体是 OpenHands 的&#34;大脑&#34;，负责：
 ...</p>
   </div>
-  <footer class="entry-footer"><span title='2026-05-01 09:52:11 +0800 CST'>May 1, 2026</span></footer>
+  <footer class="entry-footer">
+
+<span title='2026-05-01 09:52:11 +0800 CST'>May 1, 2026</span></footer>
   <a class="entry-link" aria-label="post link to Openhand_overview" href="http://localhost:1313/posts/openhand_overview/"></a>
 </article>
 
@@ -163,7 +161,9 @@ OpenHands 能做什么？ 自动化代码开发：编写、修改、重构代码
 适配器模式 装饰器模式 代理模式 行为型设计模式 负责对象间的高效沟通和职责委派。
 责任链模式 观察者模式 命令模式 策略模式 </p>
   </div>
-  <footer class="entry-footer"><span title='2026-04-24 15:43:16 +0800 CST'>April 24, 2026</span></footer>
+  <footer class="entry-footer">
+
+<span title='2026-04-24 15:43:16 +0800 CST'>April 24, 2026</span></footer>
   <a class="entry-link" aria-label="post link to Design_pattern" href="http://localhost:1313/posts/design_pattern/"></a>
 </article>
 
@@ -181,7 +181,9 @@ OpenHands 能做什么？ 自动化代码开发：编写、修改、重构代码
 std::lock_guard : 创建时立即加锁，离开作用域时自动解锁，不能被赋值，也不能被移动。只需要再一个作用域内简单保护临界区。 std::unique_lock : 内部维护一个状态标志。支持延迟加锁 std::defer_lock, 尝试加锁 try_lock 和提前手动解锁 unlock，并且支持移动语义。可以与条件变量std::condition_variable 配合使用（条件变量需要等待时释放锁）， 或需要在作用域中提前解锁以减小锁粒度。 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 void process_data() { // 场景 1：简单保护，使用 lock_guard { std::lock_guard&lt;std::mutex&gt; lock(mtx); shared_data&#43;&#43;; // 离开大括号，自动解锁 } // 场景 2：需要中间解锁执行耗时非共享操作，使用 unique_lock { std::unique_lock&lt;std::mutex&gt; lock(mtx); shared_data&#43;&#43;; lock.unlock(); // 提前手动解锁，非常关键！减小锁粒度！ // 模拟耗时的 IO 或计算操作，此时不需要霸占锁 std::cout &lt;&lt; &#34;执行耗时非共享操作...&#34; &lt;&lt; std::endl; lock.lock(); // 如果后续还需要访问共享资源，可以再次加锁 shared_data--; } } 1.2 读写锁：高并发读多写少 C&#43;&#43;14 引入 std::shared_mutex，允许多个线程同时读，但写操作是独占的。
 ...</p>
   </div>
-  <footer class="entry-footer"><span title='2026-04-15 13:40:38 +0800 CST'>April 15, 2026</span></footer>
+  <footer class="entry-footer">
+
+<span title='2026-04-15 13:40:38 +0800 CST'>April 15, 2026</span></footer>
   <a class="entry-link" aria-label="post link to Cpp_concurrent" href="http://localhost:1313/posts/cpp_concurrent/"></a>
 </article>
 
@@ -196,7 +198,9 @@ std::lock_guard : 创建时立即加锁，离开作用域时自动解锁，不�
 1.2 核心职责 AgentController │ ├── 主循环驱动 (_step) ├── 状态管理 (StateTracker) ├── 事件路由 (EventStream) ├── 委托管理 (Delegate) ├── 循环检测 (StuckDetector) ├── 安全分析 (SecurityAnalyzer) └── 配置控制 (ControlFlags) 2. AgentController 核心结构 2.1 类定义 1 2 3 4 5 6 7 8 9 10 11 12 13 class AgentController: id: str agent: Agent max_iterations: int event_stream: EventStream state: State confirmation_mode: bool agent_to_llm_config: dict[str, LLMConfig] agent_configs: dict[str, AgentConfig] parent: &#39;AgentController | None&#39; = None delegate: &#39;AgentController | None&#39; = None _pending_action_info: tuple[Action, float] | None = None _closed: bool = False 2.2 初始化流程 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 def __init__( self, agent: Agent, event_stream: EventStream, conversation_stats: ConversationStats, iteration_delta: int, # 最大迭代次数 budget_per_task_delta: float | None = None, # 最大预算 agent_to_llm_config: dict[str, LLMConfig] | None = None, agent_configs: dict[str, AgentConfig] | None = None, sid: str | None = None, file_store: FileStore | None = None, user_id: str | None = None, confirmation_mode: bool = False, initial_state: State | None = None, is_delegate: bool = False, headless_mode: bool = True, status_callback: Callable | None = None, replay_events: list[Event] | None = None, security_analyzer: &#39;SecurityAnalyzer | None&#39; = None, ): 初始化步骤：
 ...</p>
   </div>
-  <footer class="entry-footer"><span title='2026-04-10 09:51:58 +0800 CST'>April 10, 2026</span></footer>
+  <footer class="entry-footer">
+
+<span title='2026-04-10 09:51:58 +0800 CST'>April 10, 2026</span></footer>
   <a class="entry-link" aria-label="post link to Openhand_controller" href="http://localhost:1313/posts/openhand_controller/"></a>
 </article>
 
@@ -211,7 +215,9 @@ std::lock_guard : 创建时立即加锁，离开作用域时自动解锁，不�
 1.2 Runtime 职责 Runtime │ ├── 执行 Bash 命令 ├── 执行 Python 代码 (IPython/Jupyter) ├── 文件系统操作 (读/写/编辑) ├── 浏览器自动化 ├── MCP 工具调用 └── 环境隔离 1.3 运行时类型 运行时 说明 DockerRuntime Docker 容器隔离（默认） LocalRuntime 本地机器执行（无隔离） RemoteRuntime 连接远程运行时服务器 KubernetesRuntime K8s 集群中执行 2. Base Runtime 抽象接口 2.1 Runtime 基类 文件: /home/gdw/tutorial/OpenHands/openhands/runtime/base.py
 ...</p>
   </div>
-  <footer class="entry-footer"><span title='2026-04-10 09:51:52 +0800 CST'>April 10, 2026</span></footer>
+  <footer class="entry-footer">
+
+<span title='2026-04-10 09:51:52 +0800 CST'>April 10, 2026</span></footer>
   <a class="entry-link" aria-label="post link to Openhand_runtime" href="http://localhost:1313/posts/openhand_runtime/"></a>
 </article>
 
@@ -228,7 +234,9 @@ Memory (openhands/memory/memory.py) - 处理召回动作和微代理知识检索
 2.1 微代理类型 1 2 3 4 5 # openhands/microagent/types.py class MicroagentType(str, Enum): KNOWLEDGE = &#39;knowledge&#39; # 关键词触发型知识 REPO_KNOWLEDGE = &#39;repo_knowledge&#39; # 仓库级知识，始终激活 TASK = &#39;task&#39; # 任务型，需要用户输入 类型 描述 触发方式 KNOWLEDGE 可选微代理 对话中包含关键词时触发 REPO_KNOWLEDGE 仓库级知识 始终加载，提供仓库特定信息 TASK 任务型 需要用户通过 /agent_name 命令调用 2.2 微代理存储位置 微代理从以下位置加载：
 ...</p>
   </div>
-  <footer class="entry-footer"><span title='2026-04-10 09:51:46 +0800 CST'>April 10, 2026</span></footer>
+  <footer class="entry-footer">
+
+<span title='2026-04-10 09:51:46 +0800 CST'>April 10, 2026</span></footer>
   <a class="entry-link" aria-label="post link to Openhand_memory" href="http://localhost:1313/posts/openhand_memory/"></a>
 </article>
 
@@ -244,7 +252,9 @@ Memory (openhands/memory/memory.py) - 处理召回动作和微代理知识检索
 1 2 3 4 5 6 7 8 9 @dataclass class Event: INVALID_ID = -1 # 属性 id: int # 唯一标识 timestamp: str # ISO 时间戳 source: EventSource # 来源 (AGENT/USER/ENVIRONMENT) cause: int # 触发事件的 ID timeout: float | None # 超时时间 2.2 EventSource 枚举 1 2 3 4 class EventSource(str, Enum): AGENT = &#39;agent&#39; # 智能体发出 USER = &#39;user&#39; # 用户发出 ENVIRONMENT = &#39;environment&#39; # 环境发出 2.3 Action 和 Observation 1 2 3 4 5 6 7 8 9 # Action - 智能体发出的动作请求 @dataclass class Action(Event): runnable: ClassVar[bool] = False # 是否可执行 # Observation - 执行结果 @dataclass class Observation(Event): content: str # 结果内容 2.4 完整事件层次 Event (基类) ├── Action (动作请求) │ ├── CmdRunAction # 运行命令 │ ├── IPythonRunCellAction # 运行 Python │ ├── BrowseURLAction # 浏览 URL │ ├── BrowseInteractiveAction # 交互浏览 │ ├── FileReadAction # 读文件 │ ├── FileWriteAction # 写文件 │ ├── FileEditAction # 编辑文件 │ ├── MCPAction # MCP 工具调用 │ ├── MessageAction # 消息 │ ├── AgentThinkAction # 思考 │ ├── AgentFinishAction # 完成任务 │ ├── AgentRejectAction # 拒绝任务 │ ├── AgentDelegateAction # 委托 │ ├── CondensationRequestAction # 请求压缩 │ └── NullAction # 空动作 │ └── Observation (执行结果) ├── CmdOutputObservation # 命令输出 ├── IPythonRunCellObservation ├── BrowserOutputObservation ├── FileReadObservation ├── ErrorObservation # 错误 ├── SuccessObservation # 成功 ├── AgentDelegateObservation # 委托结果 ├── MCPObservation # MCP 结果 ├── RecallObservation # 记忆检索 └── NullObservation # 空观察 2.5 关键 Action 类 文件: /home/gdw/tutorial/OpenHands/openhands/events/action/commands.py
 ...</p>
   </div>
-  <footer class="entry-footer"><span title='2026-04-10 09:51:41 +0800 CST'>April 10, 2026</span></footer>
+  <footer class="entry-footer">
+
+<span title='2026-04-10 09:51:41 +0800 CST'>April 10, 2026</span></footer>
   <a class="entry-link" aria-label="post link to Openhand_event_stream" href="http://localhost:1313/posts/openhand_event_stream/"></a>
 </article>
 
@@ -260,7 +270,9 @@ Memory (openhands/memory/memory.py) - 处理召回动作和微代理知识检索
 2.1 核心抽象 1 2 3 4 5 6 7 8 9 class Agent(ABC): _registry: dict[str, type[&#39;Agent&#39;]] = {} # 类注册表 sandbox_plugins: list[PluginRequirement] = [] config_model: type[AgentConfig] = AgentConfig @abstractmethod def step(self, state: &#39;State&#39;) -&gt; &#39;Action&#39;: &#34;&#34;&#34;执行一步智能体决策 - 子类必须实现&#34;&#34;&#34; pass 2.2 类注册模式 OpenHands 使用类注册模式实现 Agent 的发现和加载：
 ...</p>
   </div>
-  <footer class="entry-footer"><span title='2026-04-10 09:47:47 +0800 CST'>April 10, 2026</span></footer>
+  <footer class="entry-footer">
+
+<span title='2026-04-10 09:47:47 +0800 CST'>April 10, 2026</span></footer>
   <a class="entry-link" aria-label="post link to Openhands Agent浅析" href="http://localhost:1313/posts/openhands_agent/"></a>
 </article>
 
@@ -278,7 +290,9 @@ Memory (openhands/memory/memory.py) - 处理召回动作和微代理知识检索
   <div class="entry-content">
     <p> 什么是 ReAct 框架？ ReAct = Reason（推理/思考） &#43; Act（行动）。 在没有 ReAct 之前，大语言模型的工作方式有两种极端： 只思考不行动（如传统的思维链 Chain-of-Thought, CoT）： 就像一个被关在小黑屋里的诸葛亮，算无遗策，但他没法上网查今天的最新数据。一旦他的内置知识有盲区，他就会靠“脑补”产生幻觉。 只行动不思考： 就像一个冲动的莽汉，拿到任务就盲目地去调用各种工具，疯狂试错，最后把自己绕晕，无法解决复杂的连环问题。 ReAct 框架巧妙地将这两者结合在了一起，让 Agent 像一个谨慎严谨的侦探一样，走一步、看一步、想一步。 ReAct 的核心运转机制：“TAO”循环 ReAct 的魔法在于它定义了一个极其经典的执行循环，我们通常称之为 TAO 循环。这三个字母分别代表： 🤔 Thought（思考）： Agent 首先会分析当前的任务状态，并推断出下一步需要做什么。 （内心OS：“用户问我 2026 年奥斯卡最佳影片导演的年龄，我得先找出这部电影的名字，然后再查导演是谁，最后查他的出生年份。”） 🛠️ Action（行动）： 基于刚才的思考，Agent 决定调用工具箱里的某个工具，并传入具体的参数。 （动作：调用【搜索引擎】工具，搜索关键词：“2026 奥斯卡最佳影片”） 👀 Observation（观察）： 工具执行完毕后，Agent 会获取外部世界的真实反馈结果。 （反馈结果：搜索页面显示，2026年奥斯卡最佳影片是《某某电影》。） 完成一次 TAO 循环后，Agent 不会停下，而是把这次的“观察”结果作为新的上下文，开启下一轮的“思考”，直到最终拿到可以回答用户的完整答案。 一个生动的例子：做一道复杂的菜 想象一下你在厨房做一道从未做过的菜。 如果你只用思维链（单纯思考），你会在脑子里想：“先把肉切了，然后下锅炒，然后加盐，最后出锅”。一旦火候不对或者锅底烧焦，因为你闭着眼睛没去看，最后菜就毁了。 如果你用的是 ReAct（思考&#43;行动&#43;观察），你的过程是这样的： Thought（思考）： 菜谱上说先把油烧热，我得去开火。 Action（行动）： 扭动燃气灶开关（调用物理动作）。 Observation（观察）： 看到火苗出来了，锅底开始冒一点青烟。 Thought（思考）： 锅热了，现在该把肉放进去了，但我得小心别被油溅到。 Action（行动）： 把肉倒进锅里，迅速拿锅盖挡住（调用防守动作）。 Observation（观察）： 听到“刺啦”一声，肉变色了。 …（循环继续，直到菜品出锅） 通过这种交替进行的模式，Agent 就不再是凭空想象，而是将自己的推理牢牢锚定在外部世界的客观事实（观察结果）上。这极大减少了幻觉，并让它能够解决那些需要多步嵌套、中途需要根据情况动态调整策略的复杂问题。 </p>
   </div>
-  <footer class="entry-footer"><span title='2026-04-09 20:27:38 +0800 CST'>April 9, 2026</span></footer>
+  <footer class="entry-footer">
+
+<span title='2026-04-09 20:27:38 +0800 CST'>April 9, 2026</span></footer>
   <a class="entry-link" aria-label="post link to Agent" href="http://localhost:1313/posts/agent/"></a>
 </article>
     </main>
@@ -286,15 +300,19 @@ Memory (openhands/memory/memory.py) - 处理召回动作和微代理知识检索
 <footer class="footer">
         <span>&copy; 2026 <a href="http://localhost:1313/">My New Hugo Project</a></span> · 
 
+    
+    
     <span>
         Powered by
-        <a href="https://gohugo.io/" rel="noopener noreferrer" target="_blank">Hugo</a> &
+        <a href="https://gohugo.io/?utm_source=papermod" rel="noopener" target="_blank">Hugo</a> &
         <a href="https://github.com/adityatelange/hugo-PaperMod/" rel="noopener" target="_blank">PaperMod</a>
     </span>
 </footer>
-<a href="#top" aria-label="go to top" title="Go to Top (Alt + G)" class="top-link" id="top-link" accesskey="g">
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 6" fill="currentColor">
-        <path d="M12 6H0l6-6z" />
+<a href="#top" id="top-link" class="top-link hidden" aria-label="go to top" title="Go to Top (Alt + G)" accesskey="g">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+        stroke-linecap="round" stroke-linejoin="round" class="feather feather-chevrons-up">
+        <polyline points="17 11 12 6 7 11"></polyline>
+        <polyline points="17 18 12 13 7 18"></polyline>
     </svg>
 </a>
 
@@ -333,14 +351,13 @@ Memory (openhands/memory/memory.py) - 处理召回动作和微代理知识检索
 
 </script>
 <script>
-    var mybutton = document.getElementById("top-link");
+    var toplink = document.getElementById("top-link");
     window.onscroll = function () {
-        if (document.body.scrollTop > 800 || document.documentElement.scrollTop > 800) {
-            mybutton.style.visibility = "visible";
-            mybutton.style.opacity = "1";
+        const scrollThreshold = window.innerHeight;
+        if (document.body.scrollTop > scrollThreshold || document.documentElement.scrollTop > scrollThreshold) {
+            toplink.classList.remove("hidden");
         } else {
-            mybutton.style.visibility = "hidden";
-            mybutton.style.opacity = "0";
+            toplink.classList.add("hidden");
         }
     };
 
