@@ -70,7 +70,7 @@ Agent 基于大语言模型（LLM）实现，通过 step() 方法驱动每次决
 
 
 2. Agent 基类设计
-文件: /home/gdw/tutorial/OpenHands/openhands/controller/agent.py
+文件: OpenHands/openhands/controller/agent.py
 2.1 核心抽象
 
 
@@ -265,7 +265,7 @@ OpenHands 使用类注册模式实现 Agent 的发现和加载：">
 </table>
 <hr>
 <h2 id="2-agent-基类设计">2. Agent 基类设计<a hidden class="anchor" aria-hidden="true" href="#2-agent-基类设计">#</a></h2>
-<p><strong>文件</strong>: <code>/home/gdw/tutorial/OpenHands/openhands/controller/agent.py</code></p>
+<p><strong>文件</strong>: <code>OpenHands/openhands/controller/agent.py</code></p>
 <h3 id="21-核心抽象">2.1 核心抽象<a hidden class="anchor" aria-hidden="true" href="#21-核心抽象">#</a></h3>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
@@ -399,7 +399,7 @@ OpenHands 使用类注册模式实现 Agent 的发现和加载：">
 <p><strong>传统方式</strong>：为每种操作定义独立工具（<code>search_web</code>、<code>read_file</code>、<code>run_command</code>），工具数量多且分散。</p>
 <p><strong>CodeAct</strong>：只用一个&quot;代码执行&quot;工具，智能体生成 Python 代码来描述操作。</p>
 <h3 id="32-codeactagent-结构">3.2 CodeActAgent 结构<a hidden class="anchor" aria-hidden="true" href="#32-codeactagent-结构">#</a></h3>
-<p><strong>文件</strong>: <code>/home/gdw/tutorial/OpenHands/openhands/agenthub/codeact_agent/codeact_agent.py</code></p>
+<p><strong>文件</strong>: <code>OpenHands/openhands/agenthub/codeact_agent/codeact_agent.py</code></p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt">1
@@ -616,7 +616,7 @@ OpenHands 使用类注册模式实现 Agent 的发现和加载：">
 </span></span></code></pre></td></tr></table>
 </div>
 </div><h3 id="42-动作解析">4.2 动作解析<a hidden class="anchor" aria-hidden="true" href="#42-动作解析">#</a></h3>
-<p><strong>文件</strong>: <code>/home/gdw/tutorial/OpenHands/openhands/agenthub/codeact_agent/function_calling.py</code></p>
+<p><strong>文件</strong>: <code>OpenHands/openhands/agenthub/codeact_agent/function_calling.py</code></p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt"> 1
@@ -670,7 +670,7 @@ Runtime 返回 Observation
 <h2 id="5-多智能体模式">5. 多智能体模式<a hidden class="anchor" aria-hidden="true" href="#5-多智能体模式">#</a></h2>
 <h3 id="51-委托机制">5.1 委托机制<a hidden class="anchor" aria-hidden="true" href="#51-委托机制">#</a></h3>
 <p>OpenHands 支持<strong>多智能体协作</strong>，通过 <code>AgentDelegateAction</code> 实现：</p>
-<p><strong>文件</strong>: <code>/home/gdw/tutorial/OpenHands/openhands/controller/agent_controller.py</code></p>
+<p><strong>文件</strong>: <code>OpenHands/openhands/controller/agent_controller.py</code></p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt"> 1
@@ -835,7 +835,7 @@ Runtime 返回 Observation
 <h2 id="6-skills-系统">6. Skills 系统<a hidden class="anchor" aria-hidden="true" href="#6-skills-系统">#</a></h2>
 <h3 id="61-什么是-skills">6.1 什么是 Skills<a hidden class="anchor" aria-hidden="true" href="#61-什么是-skills">#</a></h3>
 <p><strong>Skills</strong> 是 OpenHands 提供给智能体的 <strong>Python 函数库</strong>，通过 Jupyter/IPython 环境暴露给 Agent 调用。</p>
-<p><strong>文件</strong>: <code>/home/gdw/tutorial/OpenHands/openhands/runtime/plugins/agent_skills/</code></p>
+<p><strong>文件</strong>: <code>OpenHands/openhands/runtime/plugins/agent_skills/</code></p>
 <h3 id="62-skill-模块">6.2 Skill 模块<a hidden class="anchor" aria-hidden="true" href="#62-skill-模块">#</a></h3>
 <table>
   <thead>
@@ -924,7 +924,7 @@ Runtime 返回 Observation
 <h2 id="7-mcp-集成">7. MCP 集成<a hidden class="anchor" aria-hidden="true" href="#7-mcp-集成">#</a></h2>
 <h3 id="71-什么是-mcp">7.1 什么是 MCP<a hidden class="anchor" aria-hidden="true" href="#71-什么是-mcp">#</a></h3>
 <p><strong>MCP (Model Context Protocol)</strong> 是一种扩展智能体工具能力的协议。</p>
-<p><strong>文件</strong>: <code>/home/gdw/tutorial/OpenHands/openhands/mcp/</code></p>
+<p><strong>文件</strong>: <code>OpenHands/openhands/mcp/</code></p>
 <h3 id="72-mcpclient">7.2 MCPClient<a hidden class="anchor" aria-hidden="true" href="#72-mcpclient">#</a></h3>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
@@ -970,7 +970,7 @@ Runtime 返回 Observation
   </tbody>
 </table>
 <h3 id="74-mcpaction">7.4 MCPAction<a hidden class="anchor" aria-hidden="true" href="#74-mcpaction">#</a></h3>
-<p><strong>文件</strong>: <code>/home/gdw/tutorial/OpenHands/openhands/events/action/mcp.py</code></p>
+<p><strong>文件</strong>: <code>OpenHands/openhands/events/action/mcp.py</code></p>
 <div class="highlight"><div class="chroma">
 <table class="lntable"><tr><td class="lntd">
 <pre tabindex="0" class="chroma"><code><span class="lnt">1
@@ -1008,7 +1008,7 @@ Runtime 返回 Observation
 <h2 id="8-microagent-微智能体">8. Microagent 微智能体<a hidden class="anchor" aria-hidden="true" href="#8-microagent-微智能体">#</a></h2>
 <h3 id="81-概述">8.1 概述<a hidden class="anchor" aria-hidden="true" href="#81-概述">#</a></h3>
 <p><strong>Microagent</strong> 是一种轻量级的<strong>专门知识智能体</strong>，可在对话期间被触发。</p>
-<p><strong>文件</strong>: <code>/home/gdw/tutorial/OpenHands/openhands/microagent/microagent.py</code></p>
+<p><strong>文件</strong>: <code>OpenHands/openhands/microagent/microagent.py</code></p>
 <h3 id="82-microagent-类型">8.2 Microagent 类型<a hidden class="anchor" aria-hidden="true" href="#82-microagent-类型">#</a></h3>
 <table>
   <thead>

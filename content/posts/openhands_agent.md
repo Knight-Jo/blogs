@@ -45,7 +45,7 @@ Agent 基于大语言模型（LLM）实现，通过 `step()` 方法驱动每次�
 
 ## 2. Agent 基类设计
 
-**文件**: `/home/gdw/tutorial/OpenHands/openhands/controller/agent.py`
+**文件**: `OpenHands/openhands/controller/agent.py`
 
 ### 2.1 核心抽象
 
@@ -131,7 +131,7 @@ class Agent(ABC):
 
 ### 3.2 CodeActAgent 结构
 
-**文件**: `/home/gdw/tutorial/OpenHands/openhands/agenthub/codeact_agent/codeact_agent.py`
+**文件**: `OpenHands/openhands/agenthub/codeact_agent/codeact_agent.py`
 
 ```python
 class CodeActAgent(Agent):
@@ -240,7 +240,7 @@ ThinkTool = ChatCompletionToolParam(
 
 ### 4.2 动作解析
 
-**文件**: `/home/gdw/tutorial/OpenHands/openhands/agenthub/codeact_agent/function_calling.py`
+**文件**: `OpenHands/openhands/agenthub/codeact_agent/function_calling.py`
 
 ```python
 def response_to_actions(response: ModelResponse, mcp_tool_names: list[str] | None = None) -> list[Action]:
@@ -289,7 +289,7 @@ Runtime 返回 Observation
 
 OpenHands 支持**多智能体协作**，通过 `AgentDelegateAction` 实现：
 
-**文件**: `/home/gdw/tutorial/OpenHands/openhands/controller/agent_controller.py`
+**文件**: `OpenHands/openhands/controller/agent_controller.py`
 
 ```python
 async def start_delegate(self, action: AgentDelegateAction) -> None:
@@ -390,7 +390,7 @@ def end_delegate(self) -> None:
 
 **Skills** 是 OpenHands 提供给智能体的 **Python 函数库**，通过 Jupyter/IPython 环境暴露给 Agent 调用。
 
-**文件**: `/home/gdw/tutorial/OpenHands/openhands/runtime/plugins/agent_skills/`
+**文件**: `OpenHands/openhands/runtime/plugins/agent_skills/`
 
 ### 6.2 Skill 模块
 
@@ -432,7 +432,7 @@ action = IPythonRunCellAction(code='open_file("src/main.py", line_number=50)')
 
 **MCP (Model Context Protocol)** 是一种扩展智能体工具能力的协议。
 
-**文件**: `/home/gdw/tutorial/OpenHands/openhands/mcp/`
+**文件**: `OpenHands/openhands/mcp/`
 
 ### 7.2 MCPClient
 
@@ -454,7 +454,7 @@ class MCPClient(BaseModel):
 
 ### 7.4 MCPAction
 
-**文件**: `/home/gdw/tutorial/OpenHands/openhands/events/action/mcp.py`
+**文件**: `OpenHands/openhands/events/action/mcp.py`
 
 ```python
 @dataclass
@@ -482,7 +482,7 @@ self.set_mcp_tools(mcp_tools)  # 从配置加载 MCP 工具
 
 **Microagent** 是一种轻量级的**专门知识智能体**，可在对话期间被触发。
 
-**文件**: `/home/gdw/tutorial/OpenHands/openhands/microagent/microagent.py`
+**文件**: `OpenHands/openhands/microagent/microagent.py`
 
 ### 8.2 Microagent 类型
 

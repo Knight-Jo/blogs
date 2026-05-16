@@ -28,7 +28,7 @@ draft = false
 - 协调各组件通信
 - 处理异常和循环检测
 
-**文件**: `/home/gdw/tutorial/OpenHands/openhands/controller/agent_controller.py`
+**文件**: `OpenHands/openhands/controller/agent_controller.py`
 
 ### 1.2 核心职责
 
@@ -105,7 +105,7 @@ def __init__(
 
 ### 3.1 State 类
 
-**文件**: `/home/gdw/tutorial/OpenHands/openhands/controller/state/state.py`
+**文件**: `OpenHands/openhands/controller/state/state.py`
 
 ```python
 @dataclass
@@ -147,7 +147,7 @@ class State:
 
 ### 3.2 StateTracker
 
-**文件**: `/home/gdw/tutorial/OpenHands/openhands/controller/state/state_tracker.py`
+**文件**: `OpenHands/openhands/controller/state/state_tracker.py`
 
 ```python
 class StateTracker:
@@ -167,7 +167,7 @@ class StateTracker:
 
 ### 3.3 ControlFlags
 
-**文件**: `/home/gdw/tutorial/OpenHands/openhands/controller/state/control_flags.py`
+**文件**: `OpenHands/openhands/controller/state/control_flags.py`
 
 ```python
 @dataclass
@@ -197,7 +197,7 @@ class IterationControlFlag(ControlFlag[int]):
 
 ### 4.1 Step 执行流程
 
-**文件**: `/home/gdw/tutorial/OpenHands/openhands/controller/agent_controller.py` (line 863)
+**文件**: `OpenHands/openhands/controller/agent_controller.py` (line 863)
 
 ```python
 async def _step(self) -> None:
@@ -422,7 +422,7 @@ def end_delegate(self) -> None:
 
 ### 7.1 StuckDetector
 
-**文件**: `/home/gdw/tutorial/OpenHands/openhands/controller/stuck.py`
+**文件**: `OpenHands/openhands/controller/stuck.py`
 
 ```python
 class StuckDetector:
@@ -485,7 +485,7 @@ _react_to_exception()
 
 ### 8.1 AgentConfig
 
-**文件**: `/home/gdw/tutorial/OpenHands/openhands/core/config/agent_config.py`
+**文件**: `OpenHands/openhands/core/config/agent_config.py`
 
 ```python
 class AgentConfig(BaseModel):
@@ -504,7 +504,7 @@ class AgentConfig(BaseModel):
 
 ### 8.2 OpenHandsConfig
 
-**文件**: `/home/gdw/tutorial/OpenHands/openhands/core/config/openhands_config.py`
+**文件**: `OpenHands/openhands/core/config/openhands_config.py`
 
 ```python
 class OpenHandsConfig(BaseModel):

@@ -8,11 +8,11 @@ draft = false
 
 | 文档 | 内容 |
 |------|------|
-| **tutorial.md** | 项目概述、架构、面试指南 |
-| **[tutorial_agent.md](./tutorial_agent.md)** | Agent 详解：CodeAct、工具、多智能体、MCP、Skills |
-| **[tutorial_controller.md](./tutorial_controller.md)** | Controller 详解：主循环、状态管理、委托、循环检测 |
-| **[tutorial_event_stream.md](./tutorial_event_stream.md)** | EventStream 详解：事件流、发布-订阅、持久化 |
-| **[tutorial_runtime.md](./tutorial_runtime.md)** | Runtime 详解：沙箱、Docker、执行机制、预热池 |
+| **openhand_overview.md** | 项目概述、架构、面试指南 |
+| **[openhand_agent.md](./openhand_agent.md)** | Agent 详解：CodeAct、工具、多智能体、MCP、Skills |
+| **[openhand_controller.md](./openhand_controller.md)** | Controller 详解：主循环、状态管理、委托、循环检测 |
+| **[openhand_event_stream.md](./openhand_event_stream.md)** | EventStream 详解：事件流、发布-订阅、持久化 |
+| **[openhand_runtime.md](./openhand_runtime.md)** | Runtime 详解：沙箱、Docker、执行机制、预热池 |
 
 ---
 

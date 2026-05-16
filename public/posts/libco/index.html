@@ -1,0 +1,1424 @@
+<!DOCTYPE html>
+<html lang="en" dir="auto" data-theme="auto">
+
+<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script><meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<meta name="robots" content="noindex, nofollow">
+<title>Libco | My New Hugo Project</title>
+<meta name="keywords" content="">
+<meta name="description" content="libco 是微信后台大规模使用的 C/C&#43;&#43; 协程库，2013 年至今稳定运行在微信后台的数万台机器上。它最核心的设计思路是：通过 hook 系统调用 &#43; 自主的事件循环，让同步代码获得异步执行的并发能力。
+0. 基本使用模式
+
+
+ 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+10
+11
+12
+13
+14
+15
+16
+17
+
+
+#include &#34;co_routine.h&#34;
+
+// 1. 创建协程
+stCoRoutine_t *co = NULL;
+co_create(&amp;co, NULL, my_routine_func, arg);
+
+// 2. 恢复执行
+co_resume(co);
+
+// 3. 在协程内部主动让出
+co_yield_ct();  // 让出当前协程
+
+// 4. 启用系统调用 hook
+co_enable_hook_sys();
+
+// 5. 事件循环（通常在独立的线程中运行）
+co_eventloop(co_get_epoll_ct(), NULL, NULL);
+
+
+1. 上下文切换
+协程本质是可以暂停和恢复执行的函数, 暂停时需要保持 CPU 寄存器、栈等上下文信息，恢复时需要切换回之前的上下文。">
+<meta name="author" content="">
+<link rel="canonical" href="http://localhost:1313/posts/libco/">
+<link crossorigin="anonymous" href="/assets/css/stylesheet.a1a1b118b3e83435265dc39da18e54244bcc0e5481d1d034aadc0c899c51e15c.css" integrity="sha256-oaGxGLPoNDUmXcOdoY5UJEvMDlSB0dA0qtwMiZxR4Vw=" rel="preload stylesheet" as="style">
+<link rel="icon" href="http://localhost:1313/favicon.ico">
+<link rel="icon" type="image/png" sizes="16x16" href="http://localhost:1313/favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="http://localhost:1313/favicon-32x32.png">
+<link rel="apple-touch-icon" href="http://localhost:1313/apple-touch-icon.png">
+<link rel="mask-icon" href="http://localhost:1313/safari-pinned-tab.svg">
+<meta name="theme-color" content="#2e2e33">
+<meta name="msapplication-TileColor" content="#2e2e33">
+<link rel="alternate" hreflang="en" href="http://localhost:1313/posts/libco/">
+<noscript>
+    <style>
+        #theme-toggle,
+        .top-link {
+            display: none;
+        }
+
+    </style>
+    <style>
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --theme: rgb(29, 30, 32);
+                --entry: rgb(46, 46, 51);
+                --primary: rgb(218, 218, 219);
+                --secondary: rgb(155, 156, 157);
+                --tertiary: rgb(65, 66, 68);
+                --content: rgb(196, 196, 197);
+                --code-block-bg: rgb(46, 46, 51);
+                --code-bg: rgb(55, 56, 62);
+                --border: rgb(51, 51, 51);
+                color-scheme: dark;
+            }
+
+            .list {
+                background: var(--theme);
+            }
+
+            .toc {
+                background: var(--entry);
+            }
+        }
+
+    </style>
+</noscript>
+<script>
+    if (localStorage.getItem("pref-theme") === "dark") {
+        document.querySelector("html").dataset.theme = 'dark';
+    } else if (localStorage.getItem("pref-theme") === "light") {
+       document.querySelector("html").dataset.theme = 'light';
+    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.querySelector("html").dataset.theme = 'dark';
+    } else {
+        document.querySelector("html").dataset.theme = 'light';
+    }
+
+</script>
+</head>
+<body id="top">
+    <header class="header">
+    <nav class="header-nav">
+        <div class="logo">
+            <a href="http://localhost:1313/" accesskey="h" title="My New Hugo Project (Alt + H)">My New Hugo Project</a>
+            <div class="logo-switches">
+                <button id="theme-toggle" class="theme-toggle" accesskey="t" title="(Alt + T)" aria-label="Toggle theme">
+                    <svg class="moon" xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                    <svg class="sun" xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <ul id="menu" class="menu">
+        </ul>
+    </nav>
+</header>
+<main class="main">
+
+<article class="post-single">
+  <header class="post-header">
+    
+    <h1 class="post-title entry-hint-parent">
+      Libco
+      <span class="entry-hint" title="Draft">
+        <svg xmlns="http://www.w3.org/2000/svg" height="35" viewBox="0 -960 960 960" fill="currentColor">
+          <path
+            d="M160-410v-60h300v60H160Zm0-165v-60h470v60H160Zm0-165v-60h470v60H160Zm360 580v-123l221-220q9-9 20-13t22-4q12 0 23 4.5t20 13.5l37 37q9 9 13 20t4 22q0 11-4.5 22.5T862.09-380L643-160H520Zm300-263-37-37 37 37ZM580-220h38l121-122-18-19-19-18-122 121v38Zm141-141-19-18 37 37-18-19Z" />
+        </svg>
+      </span>
+    </h1>
+    <div class="post-meta">
+
+<span title='2026-05-10 14:10:34 +0800 CST'>May 10, 2026</span>
+
+</div>
+  </header> 
+  <div class="post-content md-content"><p>libco 是微信后台大规模使用的 C/C++ 协程库，2013 年至今稳定运行在微信后台的数万台机器上。它最核心的设计思路是：<strong>通过 hook 系统调用 + 自主的事件循环，让同步代码获得异步执行的并发能力</strong>。</p>
+<h2 id="0-基本使用模式">0. 基本使用模式<a hidden class="anchor" aria-hidden="true" href="#0-基本使用模式">#</a></h2>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c" data-lang="c"><span class="line"><span class="cl"><span class="cp">#include</span> <span class="cpf">&#34;co_routine.h&#34;</span><span class="cp">
+</span></span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 1. 创建协程
+</span></span></span><span class="line"><span class="cl"><span class="kt">stCoRoutine_t</span> <span class="o">*</span><span class="n">co</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="nf">co_create</span><span class="p">(</span><span class="o">&amp;</span><span class="n">co</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">,</span> <span class="n">my_routine_func</span><span class="p">,</span> <span class="n">arg</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 2. 恢复执行
+</span></span></span><span class="line"><span class="cl"><span class="nf">co_resume</span><span class="p">(</span><span class="n">co</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 3. 在协程内部主动让出
+</span></span></span><span class="line"><span class="cl"><span class="nf">co_yield_ct</span><span class="p">();</span>  <span class="c1">// 让出当前协程
+</span></span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 4. 启用系统调用 hook
+</span></span></span><span class="line"><span class="cl"><span class="nf">co_enable_hook_sys</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="c1">// 5. 事件循环（通常在独立的线程中运行）
+</span></span></span><span class="line"><span class="cl"><span class="nf">co_eventloop</span><span class="p">(</span><span class="nf">co_get_epoll_ct</span><span class="p">(),</span> <span class="nb">NULL</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h2 id="1-上下文切换">1. 上下文切换<a hidden class="anchor" aria-hidden="true" href="#1-上下文切换">#</a></h2>
+<p>协程本质是<strong>可以暂停和恢复执行的函数</strong>, 暂停时需要保持 CPU 寄存器、栈等上下文信息，恢复时需要切换回之前的上下文。</p>
+<h3 id="11-上下文结构体-coctx_t">1.1 上下文结构体: <code>coctx_t</code><a hidden class="anchor" aria-hidden="true" href="#11-上下文结构体-coctx_t">#</a></h3>
+<p>libco 用 <code>coctx_t</code> 结构体保持上下文：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c" data-lang="c"><span class="line"><span class="cl"><span class="c1">// libco/coctx.h
+</span></span></span><span class="line"><span class="cl"><span class="k">struct</span> <span class="kt">coctx_t</span>
+</span></span><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl"><span class="cp">#if defined(__i386__)
+</span></span></span><span class="line"><span class="cl">    <span class="kt">void</span> <span class="o">*</span><span class="n">regs</span><span class="p">[</span> <span class="mi">8</span> <span class="p">];</span>     <span class="c1">// 32位: 8个寄存器
+</span></span></span><span class="line"><span class="cl"><span class="cp">#else
+</span></span></span><span class="line"><span class="cl">    <span class="kt">void</span> <span class="o">*</span><span class="n">regs</span><span class="p">[</span> <span class="mi">14</span> <span class="p">];</span>    <span class="c1">// 64位: 14个寄存器
+</span></span></span><span class="line"><span class="cl"><span class="cp">#endif
+</span></span></span><span class="line"><span class="cl">    <span class="kt">size_t</span> <span class="n">ss_size</span><span class="p">;</span>      <span class="c1">// 栈大小
+</span></span></span><span class="line"><span class="cl">    <span class="kt">char</span> <span class="o">*</span><span class="n">ss_sp</span><span class="p">;</span>         <span class="c1">// 栈底指针
+</span></span></span><span class="line"><span class="cl"><span class="p">};</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>在 x86-64 下，14 个寄存器按以下顺序排列（见 <code>coctx.cpp</code> 的枚举）：</p>
+<pre tabindex="0"><code>regs[0]  = r15    regs[7]  = rdi
+regs[1]  = r14    regs[8]  = rsi
+regs[2]  = r13    regs[9]  = ret (返回地址)
+regs[3]  = r12    regs[10] = rdx
+regs[4]  = r9     regs[11] = rcx
+regs[5]  = r8     regs[12] = rbx
+regs[6]  = rbp    regs[13] = rsp (栈指针)
+</code></pre><h3 id="12-初始化上下文coctx_make">1.2 初始化上下文：<code>coctx_make()</code><a hidden class="anchor" aria-hidden="true" href="#12-初始化上下文coctx_make">#</a></h3>
+<p>创建协程时，libco 调用 <code>coctx_make()</code> 设置初始上下文：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c" data-lang="c"><span class="line"><span class="cl"><span class="c1">// libco/coctx.cpp (x86-64 版本)
+</span></span></span><span class="line"><span class="cl"><span class="kt">int</span> <span class="nf">coctx_make</span><span class="p">(</span><span class="kt">coctx_t</span><span class="o">*</span> <span class="n">ctx</span><span class="p">,</span> <span class="kt">coctx_pfn_t</span> <span class="n">pfn</span><span class="p">,</span> <span class="k">const</span> <span class="kt">void</span><span class="o">*</span> <span class="n">s</span><span class="p">,</span> <span class="k">const</span> <span class="kt">void</span><span class="o">*</span> <span class="n">s1</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">char</span><span class="o">*</span> <span class="n">sp</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">-&gt;</span><span class="n">ss_sp</span> <span class="o">+</span> <span class="n">ctx</span><span class="o">-&gt;</span><span class="n">ss_size</span> <span class="o">-</span> <span class="k">sizeof</span><span class="p">(</span><span class="kt">void</span><span class="o">*</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">    <span class="n">sp</span> <span class="o">=</span> <span class="p">(</span><span class="kt">char</span><span class="o">*</span><span class="p">)((</span><span class="kt">unsigned</span> <span class="kt">long</span><span class="p">)</span><span class="n">sp</span> <span class="o">&amp;</span> <span class="o">-</span><span class="mi">16LL</span><span class="p">);</span>   <span class="c1">// 16字节对齐
+</span></span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="nf">memset</span><span class="p">(</span><span class="n">ctx</span><span class="o">-&gt;</span><span class="n">regs</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">ctx</span><span class="o">-&gt;</span><span class="n">regs</span><span class="p">));</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="kt">void</span><span class="o">**</span> <span class="n">ret_addr</span> <span class="o">=</span> <span class="p">(</span><span class="kt">void</span><span class="o">**</span><span class="p">)(</span><span class="n">sp</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">    <span class="o">*</span><span class="n">ret_addr</span> <span class="o">=</span> <span class="p">(</span><span class="kt">void</span><span class="o">*</span><span class="p">)</span><span class="n">pfn</span><span class="p">;</span>   <span class="c1">// 栈顶放函数地址
+</span></span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="n">ctx</span><span class="o">-&gt;</span><span class="n">regs</span><span class="p">[</span><span class="n">kRSP</span><span class="p">]</span> <span class="o">=</span> <span class="n">sp</span><span class="p">;</span>         <span class="c1">// rsp = 栈指针
+</span></span></span><span class="line"><span class="cl">    <span class="n">ctx</span><span class="o">-&gt;</span><span class="n">regs</span><span class="p">[</span><span class="n">kRETAddr</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="kt">char</span><span class="o">*</span><span class="p">)</span><span class="n">pfn</span><span class="p">;</span>  <span class="c1">// 返回地址 = 函数地址
+</span></span></span><span class="line"><span class="cl">    <span class="n">ctx</span><span class="o">-&gt;</span><span class="n">regs</span><span class="p">[</span><span class="n">kRDI</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="kt">char</span><span class="o">*</span><span class="p">)</span><span class="n">s</span><span class="p">;</span>   <span class="c1">// rdi = 第一个参数
+</span></span></span><span class="line"><span class="cl">    <span class="n">ctx</span><span class="o">-&gt;</span><span class="n">regs</span><span class="p">[</span><span class="n">kRSI</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="kt">char</span><span class="o">*</span><span class="p">)</span><span class="n">s1</span><span class="p">;</span>  <span class="c1">// rsi = 第二个参数
+</span></span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>关键点：</p>
+<ul>
+<li><strong>栈顶写入函数地址</strong>：当 <code>coctx_swap</code> 执行 <code>ret</code> 指令时，CPU 会从栈顶弹出这个地址并跳转，从而进入协程函数</li>
+<li><strong>%rdi / %rsi 传参</strong>：x86-64 调用约定前两个参数通过寄存器传递</li>
+<li>ctx-&gt;ss_sp 是 malloc分配的栈底地址，ctx-&gt;ss_size 是栈大小。 栈指针 sp 从栈顶开始向下增长，栈顶放置函数地址（返回地址），当 <code>coctx_swap</code> 执行 <code>ret</code> 时会跳转到这个函数。</li>
+</ul>
+<h3 id="13-上下文切换coctx_swap">1.3 上下文切换：<code>coctx_swap()</code><a hidden class="anchor" aria-hidden="true" href="#13-上下文切换coctx_swap">#</a></h3>
+<p>这是 libco 最核心的汇编代码，只有约 40 行：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-asm" data-lang="asm"><span class="line"><span class="cl"><span class="c1">; libco/coctx_swap.S (x86-64)
+</span></span></span><span class="line"><span class="cl"><span class="nl">coctx_swap:</span>
+</span></span><span class="line"><span class="cl">    <span class="c1">; === 保存当前协程的上下文到 %rdi (第一个参数) ===
+</span></span></span><span class="line"><span class="cl">    <span class="nf">leaq</span> <span class="p">(</span><span class="nv">%rsp</span><span class="p">),</span> <span class="nv">%rax</span>        <span class="c1">; 获取当前 rsp
+</span></span></span><span class="line"><span class="cl">    <span class="nf">movq</span> <span class="nv">%rax</span><span class="p">,</span> <span class="mi">104</span><span class="p">(</span><span class="nv">%rdi</span><span class="p">)</span>     <span class="c1">; regs[13] = rsp
+</span></span></span><span class="line"><span class="cl">    <span class="nf">movq</span> <span class="nv">%rbx</span><span class="p">,</span> <span class="mi">96</span><span class="p">(</span><span class="nv">%rdi</span><span class="p">)</span>      <span class="c1">; regs[12] = rbx
+</span></span></span><span class="line"><span class="cl">    <span class="nf">movq</span> <span class="nv">%rcx</span><span class="p">,</span> <span class="mi">88</span><span class="p">(</span><span class="nv">%rdi</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="nf">movq</span> <span class="nv">%rdx</span><span class="p">,</span> <span class="mi">80</span><span class="p">(</span><span class="nv">%rdi</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="nf">movq</span> <span class="mi">0</span><span class="p">(</span><span class="nv">%rax</span><span class="p">),</span> <span class="nv">%rax</span>       <span class="c1">; 获取返回地址 (栈顶的值)
+</span></span></span><span class="line"><span class="cl">    <span class="nf">movq</span> <span class="nv">%rax</span><span class="p">,</span> <span class="mi">72</span><span class="p">(</span><span class="nv">%rdi</span><span class="p">)</span>      <span class="c1">; regs[9] = ret addr
+</span></span></span><span class="line"><span class="cl">    <span class="nf">movq</span> <span class="nv">%rsi</span><span class="p">,</span> <span class="mi">64</span><span class="p">(</span><span class="nv">%rdi</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="nf">movq</span> <span class="nv">%rdi</span><span class="p">,</span> <span class="mi">56</span><span class="p">(</span><span class="nv">%rdi</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="nf">movq</span> <span class="nv">%rbp</span><span class="p">,</span> <span class="mi">48</span><span class="p">(</span><span class="nv">%rdi</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="nf">movq</span> <span class="nv">%r8</span><span class="p">,</span> <span class="mi">40</span><span class="p">(</span><span class="nv">%rdi</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="nf">movq</span> <span class="nv">%r9</span><span class="p">,</span> <span class="mi">32</span><span class="p">(</span><span class="nv">%rdi</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="nf">movq</span> <span class="nv">%r12</span><span class="p">,</span> <span class="mi">24</span><span class="p">(</span><span class="nv">%rdi</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="nf">movq</span> <span class="nv">%r13</span><span class="p">,</span> <span class="mi">16</span><span class="p">(</span><span class="nv">%rdi</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="nf">movq</span> <span class="nv">%r14</span><span class="p">,</span> <span class="mi">8</span><span class="p">(</span><span class="nv">%rdi</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="nf">movq</span> <span class="nv">%r15</span><span class="p">,</span> <span class="p">(</span><span class="nv">%rdi</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="nf">xorq</span> <span class="nv">%rax</span><span class="p">,</span> <span class="nv">%rax</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="c1">; === 恢复目标协程的上下文从 %rsi (第二个参数) ===
+</span></span></span><span class="line"><span class="cl">    <span class="nf">movq</span> <span class="mi">48</span><span class="p">(</span><span class="nv">%rsi</span><span class="p">),</span> <span class="nv">%rbp</span>      <span class="c1">; 恢复 rbp
+</span></span></span><span class="line"><span class="cl">    <span class="nf">movq</span> <span class="mi">104</span><span class="p">(</span><span class="nv">%rsi</span><span class="p">),</span> <span class="nv">%rsp</span>     <span class="c1">; 恢复 rsp (切换栈！)
+</span></span></span><span class="line"><span class="cl">    <span class="nf">movq</span> <span class="p">(</span><span class="nv">%rsi</span><span class="p">),</span> <span class="nv">%r15</span>
+</span></span><span class="line"><span class="cl">    <span class="nf">movq</span> <span class="mi">8</span><span class="p">(</span><span class="nv">%rsi</span><span class="p">),</span> <span class="nv">%r14</span>
+</span></span><span class="line"><span class="cl">    <span class="nf">movq</span> <span class="mi">16</span><span class="p">(</span><span class="nv">%rsi</span><span class="p">),</span> <span class="nv">%r13</span>
+</span></span><span class="line"><span class="cl">    <span class="nf">movq</span> <span class="mi">24</span><span class="p">(</span><span class="nv">%rsi</span><span class="p">),</span> <span class="nv">%r12</span>
+</span></span><span class="line"><span class="cl">    <span class="nf">movq</span> <span class="mi">32</span><span class="p">(</span><span class="nv">%rsi</span><span class="p">),</span> <span class="nv">%r9</span>
+</span></span><span class="line"><span class="cl">    <span class="nf">movq</span> <span class="mi">40</span><span class="p">(</span><span class="nv">%rsi</span><span class="p">),</span> <span class="nv">%r8</span>
+</span></span><span class="line"><span class="cl">    <span class="nf">movq</span> <span class="mi">56</span><span class="p">(</span><span class="nv">%rsi</span><span class="p">),</span> <span class="nv">%rdi</span>
+</span></span><span class="line"><span class="cl">    <span class="nf">movq</span> <span class="mi">80</span><span class="p">(</span><span class="nv">%rsi</span><span class="p">),</span> <span class="nv">%rdx</span>
+</span></span><span class="line"><span class="cl">    <span class="nf">movq</span> <span class="mi">88</span><span class="p">(</span><span class="nv">%rsi</span><span class="p">),</span> <span class="nv">%rcx</span>
+</span></span><span class="line"><span class="cl">    <span class="nf">movq</span> <span class="mi">96</span><span class="p">(</span><span class="nv">%rsi</span><span class="p">),</span> <span class="nv">%rbx</span>
+</span></span><span class="line"><span class="cl">    <span class="nf">leaq</span> <span class="mi">8</span><span class="p">(</span><span class="nv">%rsp</span><span class="p">),</span> <span class="nv">%rsp</span>       <span class="c1">; 调整栈指针
+</span></span></span><span class="line"><span class="cl">    <span class="nf">pushq</span> <span class="mi">72</span><span class="p">(</span><span class="nv">%rsi</span><span class="p">)</span>           <span class="c1">; 把返回地址压入新栈
+</span></span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="nf">movq</span> <span class="mi">64</span><span class="p">(</span><span class="nv">%rsi</span><span class="p">),</span> <span class="nv">%rsi</span>      <span class="c1">; 恢复 rsi
+</span></span></span><span class="line"><span class="cl">    <span class="nf">ret</span>                      <span class="c1">; ret = 弹出栈顶地址并跳转！
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>执行流程</strong>：</p>
+<ol>
+<li>把所有 callee-saved 寄存器保存到 <code>curr-&gt;ctx</code>（%rdi 指向当前协程）</li>
+<li>从 <code>pending-&gt;ctx</code>（%rsi 指向目标协程）恢复所有寄存器</li>
+<li>关键一步 <code>movq 104(%rsi), %rsp</code> — 切换栈指针，这是协程切换的本质</li>
+<li>把目标协程的返回地址压栈后 <code>ret</code>，跳转到目标协程上次暂停的地方</li>
+</ol>
+<pre tabindex="0"><code>┌──────────────┐          ┌──────────────┐
+│   协程A      │          │   协程B      │
+│  (当前运行)  │          │  (待恢复)    │
+└──────┬───────┘          └──────┬───────┘
+       │                         │
+       │  coctx_swap(&amp;A, &amp;B)     │
+       ├─────────────────────────┤
+       │  保存A的寄存器到 A.ctx   │
+       │  从B.ctx恢复B的寄存器   │
+       │  切换rsp到B的栈        │
+       │  ret → 跳转到B的代码    │
+       └─────────────────────────┘
+                               │
+                               ▼
+                          B继续执行
+</code></pre><p><strong>💡 核心要点</strong>：</p>
+<ul>
+<li><code>coctx_swap</code> 不关心协程函数是什么，它只做一件事：保存当前寄存器，加载另一组寄存器</li>
+<li>切换 <code>%rsp</code> 就是切换栈，这是协程切换的本质</li>
+<li>整个切换过程只涉及几十条指令，没有系统调用，因此比线程切换快得多</li>
+</ul>
+<hr>
+<h2 id="2-hook-机制">2. Hook 机制<a hidden class="anchor" aria-hidden="true" href="#2-hook-机制">#</a></h2>
+<h3 id="21-为什么需要-hook">2.1 为什么需要 Hook？<a hidden class="anchor" aria-hidden="true" href="#21-为什么需要-hook">#</a></h3>
+<p>在普通的同步网络编程中，调用 <code>read(fd, buf, size)</code> 时，如果 fd 没有数据可读，线程会<strong>阻塞等待</strong>。但在协程环境下，我们希望的是：<strong>如果 fd 没有数据，就让出 CPU 去执行其他协程，等数据就绪了再回来继续执行</strong>。</p>
+<p>libco 通过 hook 系统调用来实现这一目标。</p>
+<h3 id="22-原理dlsymrtld_next">2.2 原理：dlsym(RTLD_NEXT)<a hidden class="anchor" aria-hidden="true" href="#22-原理dlsymrtld_next">#</a></h3>
+<p>libco 利用动态链接的 <code>dlsym(RTLD_NEXT, ...)</code> 找到 libc 中原始函数的地址并保存：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c" data-lang="c"><span class="line"><span class="cl"><span class="c1">// libco/co_hook_sys_call.cpp
+</span></span></span><span class="line"><span class="cl"><span class="k">static</span> <span class="kt">read_pfn_t</span> <span class="n">g_sys_read_func</span> <span class="o">=</span> <span class="p">(</span><span class="kt">read_pfn_t</span><span class="p">)</span><span class="nf">dlsym</span><span class="p">(</span><span class="n">RTLD_NEXT</span><span class="p">,</span> <span class="s">&#34;read&#34;</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="k">static</span> <span class="kt">write_pfn_t</span> <span class="n">g_sys_write_func</span> <span class="o">=</span> <span class="p">(</span><span class="kt">read_pfn_t</span><span class="p">)</span><span class="nf">dlsym</span><span class="p">(</span><span class="n">RTLD_NEXT</span><span class="p">,</span> <span class="s">&#34;write&#34;</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="k">static</span> <span class="kt">poll_pfn_t</span> <span class="n">g_sys_poll_func</span> <span class="o">=</span> <span class="p">(</span><span class="kt">poll_pfn_t</span><span class="p">)</span><span class="nf">dlsym</span><span class="p">(</span><span class="n">RTLD_NEXT</span><span class="p">,</span> <span class="s">&#34;poll&#34;</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="c1">// ... 还有 socket, connect, close, send, recv, sendto, recvfrom ...
+</span></span></span></code></pre></td></tr></table>
+</div>
+</div><p>然后定义同名的 <code>read()</code>、<code>write()</code> 等函数。由于这些函数定义在共享库中，链接时它们会覆盖 libc 的同名函数。</p>
+<h3 id="23-fd-的管理rpchook_t">2.3 fd 的管理：rpchook_t<a hidden class="anchor" aria-hidden="true" href="#23-fd-的管理rpchook_t">#</a></h3>
+<p>libco 需要给每个 socket fd 记录一些元数据：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c" data-lang="c"><span class="line"><span class="cl"><span class="k">struct</span> <span class="kt">rpchook_t</span>
+</span></span><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">int</span> <span class="n">user_flag</span><span class="p">;</span>              <span class="c1">// 用户设置的 flag（如 O_NONBLOCK）
+</span></span></span><span class="line"><span class="cl">    <span class="k">struct</span> <span class="n">sockaddr_in</span> <span class="n">dest</span><span class="p">;</span>    <span class="c1">// 目标地址
+</span></span></span><span class="line"><span class="cl">    <span class="kt">int</span> <span class="n">domain</span><span class="p">;</span>                 <span class="c1">// AF_INET / AF_LOCAL
+</span></span></span><span class="line"><span class="cl">    <span class="k">struct</span> <span class="n">timeval</span> <span class="n">read_timeout</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="k">struct</span> <span class="n">timeval</span> <span class="n">write_timeout</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">};</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">static</span> <span class="kt">rpchook_t</span> <span class="o">*</span><span class="n">g_rpchook_socket_fd</span><span class="p">[</span><span class="mi">102400</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span> <span class="mi">0</span> <span class="p">};</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p><code>g_rpchook_socket_fd</code> 是一个大数组，用 fd 做索引。通过 <code>get_by_fd(fd)</code> / <code>alloc_by_fd(fd)</code> / <code>free_by_fd(fd)</code> 管理。</p>
+<h3 id="24-fcntl-hook关键的欺骗">2.4 fcntl hook：关键的&quot;欺骗&quot;<a hidden class="anchor" aria-hidden="true" href="#24-fcntl-hook关键的欺骗">#</a></h3>
+<p>为了让系统调用永不阻塞，libco 的 <code>fcntl</code> hook 做了一件关键的事：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c" data-lang="c"><span class="line"><span class="cl"><span class="kt">int</span> <span class="nf">fcntl</span><span class="p">(</span><span class="kt">int</span> <span class="n">fildes</span><span class="p">,</span> <span class="kt">int</span> <span class="n">cmd</span><span class="p">,</span> <span class="p">...)</span>
+</span></span><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="c1">// ...
+</span></span></span><span class="line"><span class="cl">    <span class="k">switch</span> <span class="p">(</span><span class="n">cmd</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="k">case</span> <span class="nl">F_SETFL</span><span class="p">:</span>
+</span></span><span class="line"><span class="cl">    <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="kt">int</span> <span class="n">param</span> <span class="o">=</span> <span class="nf">va_arg</span><span class="p">(</span><span class="n">arg_list</span><span class="p">,</span> <span class="kt">int</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">        <span class="kt">int</span> <span class="n">flag</span> <span class="o">=</span> <span class="n">param</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">        <span class="k">if</span> <span class="p">(</span><span class="nf">co_is_enable_sys_hook</span><span class="p">()</span> <span class="o">&amp;&amp;</span> <span class="n">lp</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">        <span class="p">{</span>
+</span></span><span class="line"><span class="cl">            <span class="n">flag</span> <span class="o">|=</span> <span class="n">O_NONBLOCK</span><span class="p">;</span>   <span class="c1">// 强制加上 O_NONBLOCK！
+</span></span></span><span class="line"><span class="cl">        <span class="p">}</span>
+</span></span><span class="line"><span class="cl">        <span class="n">ret</span> <span class="o">=</span> <span class="nf">g_sys_fcntl_func</span><span class="p">(</span><span class="n">fildes</span><span class="p">,</span> <span class="n">cmd</span><span class="p">,</span> <span class="n">flag</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">        <span class="k">if</span> <span class="p">(</span><span class="mi">0</span> <span class="o">==</span> <span class="n">ret</span> <span class="o">&amp;&amp;</span> <span class="n">lp</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">        <span class="p">{</span>
+</span></span><span class="line"><span class="cl">            <span class="n">lp</span><span class="o">-&gt;</span><span class="n">user_flag</span> <span class="o">=</span> <span class="n">param</span><span class="p">;</span>  <span class="c1">// 保存用户原来的 flag
+</span></span></span><span class="line"><span class="cl">        <span class="p">}</span>
+</span></span><span class="line"><span class="cl">        <span class="k">break</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="c1">// ...
+</span></span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>这意味着：当用户调用 <code>fcntl(fd, F_SETFL, 0)</code> 想设置阻塞 IO 时，libco 实际设置的是 <code>O_NONBLOCK</code>，但把用户期望的 flag 保存在 <code>lp-&gt;user_flag</code> 中。<strong>底层 fd 永远是 non-blocking 的</strong>。</p>
+<h3 id="25-read-和-write-hook阻塞变协程调度">2.5 read 和 write hook：阻塞变协程调度<a hidden class="anchor" aria-hidden="true" href="#25-read-和-write-hook阻塞变协程调度">#</a></h3>
+<p>有了 non-blocking fd 作为基础，<code>read</code> hook 的模式就很清晰了：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c" data-lang="c"><span class="line"><span class="cl"><span class="kt">ssize_t</span> <span class="nf">read</span><span class="p">(</span><span class="kt">int</span> <span class="n">fd</span><span class="p">,</span> <span class="kt">void</span> <span class="o">*</span><span class="n">buf</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">nbyte</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="nf">HOOK_SYS_FUNC</span><span class="p">(</span><span class="n">read</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="c1">// 1. 如果没开 hook，直接走系统调用
+</span></span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="nf">co_is_enable_sys_hook</span><span class="p">())</span>
+</span></span><span class="line"><span class="cl">        <span class="k">return</span> <span class="nf">g_sys_read_func</span><span class="p">(</span><span class="n">fd</span><span class="p">,</span> <span class="n">buf</span><span class="p">,</span> <span class="n">nbyte</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="kt">rpchook_t</span> <span class="o">*</span><span class="n">lp</span> <span class="o">=</span> <span class="nf">get_by_fd</span><span class="p">(</span><span class="n">fd</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="c1">// 2. 如果用户明确设了 O_NONBLOCK，直接走系统调用
+</span></span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">lp</span> <span class="o">||</span> <span class="p">(</span><span class="n">O_NONBLOCK</span> <span class="o">&amp;</span> <span class="n">lp</span><span class="o">-&gt;</span><span class="n">user_flag</span><span class="p">))</span>
+</span></span><span class="line"><span class="cl">        <span class="k">return</span> <span class="nf">g_sys_read_func</span><span class="p">(</span><span class="n">fd</span><span class="p">,</span> <span class="n">buf</span><span class="p">,</span> <span class="n">nbyte</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="c1">// 3. 计算超时时间
+</span></span></span><span class="line"><span class="cl">    <span class="kt">int</span> <span class="n">timeout</span> <span class="o">=</span> <span class="n">lp</span><span class="o">-&gt;</span><span class="n">read_timeout</span><span class="p">.</span><span class="n">tv_sec</span> <span class="o">*</span> <span class="mi">1000</span> <span class="o">+</span> <span class="n">lp</span><span class="o">-&gt;</span><span class="n">read_timeout</span><span class="p">.</span><span class="n">tv_usec</span> <span class="o">/</span> <span class="mi">1000</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="c1">// 4. poll → 注册到 epoll → 让出协程
+</span></span></span><span class="line"><span class="cl">    <span class="k">struct</span> <span class="n">pollfd</span> <span class="n">pf</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">};</span>
+</span></span><span class="line"><span class="cl">    <span class="n">pf</span><span class="p">.</span><span class="n">fd</span> <span class="o">=</span> <span class="n">fd</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">pf</span><span class="p">.</span><span class="n">events</span> <span class="o">=</span> <span class="n">POLLIN</span> <span class="o">|</span> <span class="n">POLLERR</span> <span class="o">|</span> <span class="n">POLLHUP</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">int</span> <span class="n">pollret</span> <span class="o">=</span> <span class="nf">poll</span><span class="p">(</span><span class="o">&amp;</span><span class="n">pf</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">timeout</span><span class="p">);</span>   <span class="c1">// ← 这里是 libco 的 poll！
+</span></span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="c1">// 5. 当 poll 返回时，说明数据已就绪（或超时），执行真正的 read
+</span></span></span><span class="line"><span class="cl">    <span class="kt">ssize_t</span> <span class="n">readret</span> <span class="o">=</span> <span class="nf">g_sys_read_func</span><span class="p">(</span><span class="n">fd</span><span class="p">,</span> <span class="p">(</span><span class="kt">char</span><span class="o">*</span><span class="p">)</span><span class="n">buf</span><span class="p">,</span> <span class="n">nbyte</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="n">readret</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>这个 <code>poll</code> 调用不再是 libc 的 <code>poll</code>，而是 libco 的 <code>poll</code>，它会：</p>
+<ol>
+<li>把 fd 注册到 libco 内部的 epoll 实例</li>
+<li>设置超时</li>
+<li><strong>让出当前协程</strong>（<code>co_yield_env</code>）</li>
+<li>等事件就绪或超时后，被事件循环恢复执行</li>
+</ol>
+<h3 id="26-connect-hook">2.6 connect hook<a hidden class="anchor" aria-hidden="true" href="#26-connect-hook">#</a></h3>
+<p><code>connect</code> 的 hook 更特殊。在 non-blocking fd 上调用 <code>connect</code> 会立即返回 <code>-1</code> 和 <code>errno = EINPROGRESS</code>（连接正在进行中）。libco 的处理是：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c" data-lang="c"><span class="line"><span class="cl"><span class="kt">int</span> <span class="nf">connect</span><span class="p">(</span><span class="kt">int</span> <span class="n">fd</span><span class="p">,</span> <span class="k">const</span> <span class="k">struct</span> <span class="n">sockaddr</span> <span class="o">*</span><span class="n">address</span><span class="p">,</span> <span class="kt">socklen_t</span> <span class="n">address_len</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="c1">// ... 系统调用 ...
+</span></span></span><span class="line"><span class="cl">    <span class="kt">int</span> <span class="n">ret</span> <span class="o">=</span> <span class="nf">g_sys_connect_func</span><span class="p">(</span><span class="n">fd</span><span class="p">,</span> <span class="n">address</span><span class="p">,</span> <span class="n">address_len</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="c1">// 如果返回 EINPROGRESS，等待 POLLOUT 事件
+</span></span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="p">(</span><span class="n">ret</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="o">&amp;&amp;</span> <span class="n">errno</span> <span class="o">==</span> <span class="n">EINPROGRESS</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="k">struct</span> <span class="n">pollfd</span> <span class="n">pf</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">};</span>
+</span></span><span class="line"><span class="cl">        <span class="n">pf</span><span class="p">.</span><span class="n">fd</span> <span class="o">=</span> <span class="n">fd</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">        <span class="n">pf</span><span class="p">.</span><span class="n">events</span> <span class="o">=</span> <span class="n">POLLOUT</span> <span class="o">|</span> <span class="n">POLLERR</span> <span class="o">|</span> <span class="n">POLLHUP</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">        <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="mi">3</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span>  <span class="c1">// 最多重试 3 次，每次 25s
+</span></span></span><span class="line"><span class="cl">        <span class="p">{</span>
+</span></span><span class="line"><span class="cl">            <span class="n">pollret</span> <span class="o">=</span> <span class="nf">poll</span><span class="p">(</span><span class="o">&amp;</span><span class="n">pf</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">25000</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">            <span class="k">if</span> <span class="p">(</span><span class="mi">1</span> <span class="o">==</span> <span class="n">pollret</span><span class="p">)</span> <span class="k">break</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">        <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">        <span class="k">if</span> <span class="p">(</span><span class="n">pf</span><span class="p">.</span><span class="n">revents</span> <span class="o">&amp;</span> <span class="n">POLLOUT</span><span class="p">)</span>   <span class="c1">// 连接成功
+</span></span></span><span class="line"><span class="cl">        <span class="p">{</span>
+</span></span><span class="line"><span class="cl">            <span class="kt">int</span> <span class="n">err</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">            <span class="nf">getsockopt</span><span class="p">(</span><span class="n">fd</span><span class="p">,</span> <span class="n">SOL_SOCKET</span><span class="p">,</span> <span class="n">SO_ERROR</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">err</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">errlen</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">            <span class="c1">// ...
+</span></span></span><span class="line"><span class="cl">            <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">        <span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="27-setsockopt-hook截获超时设置">2.7 setsockopt hook：截获超时设置<a hidden class="anchor" aria-hidden="true" href="#27-setsockopt-hook截获超时设置">#</a></h3>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c" data-lang="c"><span class="line"><span class="cl"><span class="kt">int</span> <span class="nf">setsockopt</span><span class="p">(</span><span class="kt">int</span> <span class="n">fd</span><span class="p">,</span> <span class="kt">int</span> <span class="n">level</span><span class="p">,</span> <span class="kt">int</span> <span class="n">option_name</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">               <span class="k">const</span> <span class="kt">void</span> <span class="o">*</span><span class="n">option_value</span><span class="p">,</span> <span class="kt">socklen_t</span> <span class="n">option_len</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">rpchook_t</span> <span class="o">*</span><span class="n">lp</span> <span class="o">=</span> <span class="nf">get_by_fd</span><span class="p">(</span><span class="n">fd</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="p">(</span><span class="n">lp</span> <span class="o">&amp;&amp;</span> <span class="n">SOL_SOCKET</span> <span class="o">==</span> <span class="n">level</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="k">if</span> <span class="p">(</span><span class="n">SO_RCVTIMEO</span> <span class="o">==</span> <span class="n">option_name</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">            <span class="nf">memcpy</span><span class="p">(</span><span class="o">&amp;</span><span class="n">lp</span><span class="o">-&gt;</span><span class="n">read_timeout</span><span class="p">,</span> <span class="n">val</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="o">*</span><span class="n">val</span><span class="p">));</span>
+</span></span><span class="line"><span class="cl">        <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">SO_SNDTIMEO</span> <span class="o">==</span> <span class="n">option_name</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">            <span class="nf">memcpy</span><span class="p">(</span><span class="o">&amp;</span><span class="n">lp</span><span class="o">-&gt;</span><span class="n">write_timeout</span><span class="p">,</span> <span class="n">val</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="o">*</span><span class="n">val</span><span class="p">));</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="nf">g_sys_setsockopt_func</span><span class="p">(</span><span class="n">fd</span><span class="p">,</span> <span class="n">level</span><span class="p">,</span> <span class="n">option_name</span><span class="p">,</span> <span class="n">option_value</span><span class="p">,</span> <span class="n">option_len</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>这样，用户调用 <code>setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &amp;tv, sizeof(tv))</code> 设置超时时间时，libco 会记录下来，后续 hook 的 <code>read</code> / <code>recv</code> 会用这个时间作为 poll 的超时参数。</p>
+<pre tabindex="0"><code>用户代码                         libco hook 层                   操作系统
+    │                               │                              │
+    ├─ read(fd, buf, N) ───────────►│                              │
+    │                               ├─ co_is_enable_sys_hook() ───►│ yes
+    │                               ├─ get_by_fd(fd) ────────────►│ 有 rpchook
+    │                               ├─ poll(fds, 1, timeout) ────►│
+    │                               │   ├─ epoll_ctl(ADD) ────────►│
+    │                               │   ├─ co_yield() ← 暂停协程  │
+    │                               │   │                          │
+    │                               │   │    [等待 epoll_wait 返回]
+    │                               │   │                          │
+    │                               │   ├─ co_resume() → 恢复协程  │
+    │                               ├─ g_sys_read_func(fd, buf, N)►│
+    │◄──────────────────────────────┤                              │
+</code></pre><p><strong>💡 核心要点</strong>：</p>
+<ul>
+<li><code>dlsym(RTLD_NEXT)</code> 获取原始函数，同名函数覆盖 libc 函数</li>
+<li>强制 fd 始终为 <code>O_NONBLOCK</code>，配合 poll+协程让出来实现&quot;看起来同步，实际异步&quot;</li>
+<li>每种阻塞操作被拆解为：注册 epoll → 让出协程 → 等待事件 → 恢复 → 执行真正的 IO</li>
+</ul>
+<hr>
+<h2 id="3-事件循环--epoll">3. 事件循环 + epoll<a hidden class="anchor" aria-hidden="true" href="#3-事件循环--epoll">#</a></h2>
+<h3 id="31-核心结构体stcoepoll_t">3.1 核心结构体：stCoEpoll_t<a hidden class="anchor" aria-hidden="true" href="#31-核心结构体stcoepoll_t">#</a></h3>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c" data-lang="c"><span class="line"><span class="cl"><span class="k">struct</span> <span class="kt">stCoEpoll_t</span>
+</span></span><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">int</span> <span class="n">iEpollFd</span><span class="p">;</span>                             <span class="c1">// epoll 实例的 fd
+</span></span></span><span class="line"><span class="cl">    <span class="k">static</span> <span class="k">const</span> <span class="kt">int</span> <span class="n">_EPOLL_SIZE</span> <span class="o">=</span> <span class="mi">1024</span> <span class="o">*</span> <span class="mi">10</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="k">struct</span> <span class="kt">stTimeout_t</span> <span class="o">*</span><span class="n">pTimeout</span><span class="p">;</span>             <span class="c1">// 时间轮定时器
+</span></span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="k">struct</span> <span class="kt">stTimeoutItemLink_t</span> <span class="o">*</span><span class="n">pstTimeoutList</span><span class="p">;</span>  <span class="c1">// 超时事件链表
+</span></span></span><span class="line"><span class="cl">    <span class="k">struct</span> <span class="kt">stTimeoutItemLink_t</span> <span class="o">*</span><span class="n">pstActiveList</span><span class="p">;</span>   <span class="c1">// 活跃事件链表
+</span></span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="n">co_epoll_res</span> <span class="o">*</span><span class="n">result</span><span class="p">;</span>                     <span class="c1">// epoll_wait 结果缓冲区
+</span></span></span><span class="line"><span class="cl"><span class="p">};</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>每个线程拥有一个 <code>stCoEpoll_t</code> 实例（存储在 <code>stCoRoutineEnv_t</code> 中）。</p>
+<h3 id="32-时间轮定时器sttimeout_t">3.2 时间轮定时器：stTimeout_t<a hidden class="anchor" aria-hidden="true" href="#32-时间轮定时器sttimeout_t">#</a></h3>
+<p>libco 的定时器通过<strong>时间轮</strong>实现，比传统的有序链表更高效：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c" data-lang="c"><span class="line"><span class="cl"><span class="k">struct</span> <span class="kt">stTimeout_t</span>
+</span></span><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">stTimeoutItemLink_t</span> <span class="o">*</span><span class="n">pItems</span><span class="p">;</span>   <span class="c1">// 槽位数组（环形缓冲区）
+</span></span></span><span class="line"><span class="cl">    <span class="kt">int</span> <span class="n">iItemSize</span><span class="p">;</span>                 <span class="c1">// 槽位数（默认 60 * 1000 = 60000）
+</span></span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="kt">unsigned</span> <span class="kt">long</span> <span class="kt">long</span> <span class="n">ullStart</span><span class="p">;</span>   <span class="c1">// 起始时间（毫秒）
+</span></span></span><span class="line"><span class="cl">    <span class="kt">long</span> <span class="kt">long</span> <span class="n">llStartIdx</span><span class="p">;</span>          <span class="c1">// 当前起始槽索引
+</span></span></span><span class="line"><span class="cl"><span class="p">};</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl"><span class="k">struct</span> <span class="kt">stTimeoutItem_t</span>
+</span></span><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">stTimeoutItem_t</span> <span class="o">*</span><span class="n">pPrev</span><span class="p">,</span> <span class="o">*</span><span class="n">pNext</span><span class="p">;</span>     <span class="c1">// 双向链表指针
+</span></span></span><span class="line"><span class="cl">    <span class="kt">stTimeoutItemLink_t</span> <span class="o">*</span><span class="n">pLink</span><span class="p">;</span>         <span class="c1">// 所属链表
+</span></span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="kt">unsigned</span> <span class="kt">long</span> <span class="kt">long</span> <span class="n">ullExpireTime</span><span class="p">;</span>   <span class="c1">// 过期时间（毫秒）
+</span></span></span><span class="line"><span class="cl">    <span class="n">OnPreparePfn_t</span> <span class="n">pfnPrepare</span><span class="p">;</span>          <span class="c1">// 事件就绪时的预处理函数
+</span></span></span><span class="line"><span class="cl">    <span class="n">OnProcessPfn_t</span> <span class="n">pfnProcess</span><span class="p">;</span>          <span class="c1">// 事件处理函数
+</span></span></span><span class="line"><span class="cl">    <span class="kt">void</span> <span class="o">*</span><span class="n">pArg</span><span class="p">;</span>                         <span class="c1">// 参数（通常是协程指针）
+</span></span></span><span class="line"><span class="cl">    <span class="kt">bool</span> <span class="n">bTimeout</span><span class="p">;</span>                      <span class="c1">// 是否超时
+</span></span></span><span class="line"><span class="cl"><span class="p">};</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>添加定时器：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c" data-lang="c"><span class="line"><span class="cl"><span class="kt">int</span> <span class="nf">AddTimeout</span><span class="p">(</span><span class="kt">stTimeout_t</span> <span class="o">*</span><span class="n">apTimeout</span><span class="p">,</span> <span class="kt">stTimeoutItem_t</span> <span class="o">*</span><span class="n">apItem</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">               <span class="kt">unsigned</span> <span class="kt">long</span> <span class="kt">long</span> <span class="n">allNow</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">unsigned</span> <span class="kt">long</span> <span class="kt">long</span> <span class="n">diff</span> <span class="o">=</span> <span class="n">apItem</span><span class="o">-&gt;</span><span class="n">ullExpireTime</span> <span class="o">-</span> <span class="n">apTimeout</span><span class="o">-&gt;</span><span class="n">ullStart</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="p">(</span><span class="n">diff</span> <span class="o">&gt;=</span> <span class="p">(</span><span class="kt">unsigned</span> <span class="kt">long</span> <span class="kt">long</span><span class="p">)</span><span class="n">apTimeout</span><span class="o">-&gt;</span><span class="n">iItemSize</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">        <span class="n">diff</span> <span class="o">=</span> <span class="n">apTimeout</span><span class="o">-&gt;</span><span class="n">iItemSize</span> <span class="o">-</span> <span class="mi">1</span><span class="p">;</span>   <span class="c1">// 最多放到最后一个槽
+</span></span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="c1">// 计算槽位索引，放入链表
+</span></span></span><span class="line"><span class="cl">    <span class="kt">int</span> <span class="n">idx</span> <span class="o">=</span> <span class="p">(</span><span class="n">apTimeout</span><span class="o">-&gt;</span><span class="n">llStartIdx</span> <span class="o">+</span> <span class="n">diff</span><span class="p">)</span> <span class="o">%</span> <span class="n">apTimeout</span><span class="o">-&gt;</span><span class="n">iItemSize</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="nf">AddTail</span><span class="p">(</span><span class="n">apTimeout</span><span class="o">-&gt;</span><span class="n">pItems</span> <span class="o">+</span> <span class="n">idx</span><span class="p">,</span> <span class="n">apItem</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>取出所有过期的定时器：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c" data-lang="c"><span class="line"><span class="cl"><span class="kr">inline</span> <span class="kt">void</span> <span class="nf">TakeAllTimeout</span><span class="p">(</span><span class="kt">stTimeout_t</span> <span class="o">*</span><span class="n">apTimeout</span><span class="p">,</span> <span class="kt">unsigned</span> <span class="kt">long</span> <span class="kt">long</span> <span class="n">allNow</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">                           <span class="kt">stTimeoutItemLink_t</span> <span class="o">*</span><span class="n">apResult</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">int</span> <span class="n">cnt</span> <span class="o">=</span> <span class="n">allNow</span> <span class="o">-</span> <span class="n">apTimeout</span><span class="o">-&gt;</span><span class="n">ullStart</span> <span class="o">+</span> <span class="mi">1</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="p">(</span><span class="n">cnt</span> <span class="o">&gt;</span> <span class="n">apTimeout</span><span class="o">-&gt;</span><span class="n">iItemSize</span><span class="p">)</span> <span class="n">cnt</span> <span class="o">=</span> <span class="n">apTimeout</span><span class="o">-&gt;</span><span class="n">iItemSize</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">cnt</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="kt">int</span> <span class="n">idx</span> <span class="o">=</span> <span class="p">(</span><span class="n">apTimeout</span><span class="o">-&gt;</span><span class="n">llStartIdx</span> <span class="o">+</span> <span class="n">i</span><span class="p">)</span> <span class="o">%</span> <span class="n">apTimeout</span><span class="o">-&gt;</span><span class="n">iItemSize</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">        <span class="nf">Join</span><span class="p">(</span><span class="n">apResult</span><span class="p">,</span> <span class="n">apTimeout</span><span class="o">-&gt;</span><span class="n">pItems</span> <span class="o">+</span> <span class="n">idx</span><span class="p">);</span>  <span class="c1">// 把链表中所有节点移入结果
+</span></span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="n">apTimeout</span><span class="o">-&gt;</span><span class="n">ullStart</span> <span class="o">=</span> <span class="n">allNow</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">apTimeout</span><span class="o">-&gt;</span><span class="n">llStartIdx</span> <span class="o">+=</span> <span class="n">cnt</span> <span class="o">-</span> <span class="mi">1</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p>时间轮的关键优势：<strong>O(1) 添加，O(1) 取出过期定时器</strong>。传统定时器使用有序链表或 <code>std::set</code>，添加和删除都是 O(log n)。</p>
+<h3 id="33-核心循环co_eventloop">3.3 核心循环：co_eventloop()<a hidden class="anchor" aria-hidden="true" href="#33-核心循环co_eventloop">#</a></h3>
+<pre tabindex="0"><code>co_eventloop()
+    │
+    ├─ co_epoll_wait(epfd, events, 10240, 1ms)  ← 1ms 超时
+    │
+    ├─ for each event:
+    │     ├─ pfnPrepare(item, event, activeList)  ← 设置 revents
+    │     │   └─ OnPollPreparePfn: 记录 fd 的就绪事件，把 poll 加入 activeList
+    │     └─ or: AddTail(activeList, item)          ← 加入活跃列表
+    │
+    ├─ TakeAllTimeout(pTimeout, now, timeoutList)   ← 取出过期定时器
+    │
+    ├─ Join(activeList, timeoutList)                ← 合并到活跃列表
+    │
+    ├─ for each item in activeList:
+    │     ├─ PopHead(activeList, item)
+    │     ├─ if timeout but not yet expired:        ← 定时器精度修正
+    │     │     AddTimeout(pTimeout, item, now)     ← 重新加入
+    │     │     continue
+    │     ├─ pfnProcess(item)                       ← 处理事件
+    │     │   └─ OnPollProcessEvent: co_resume(co)  ← 恢复协程！
+    │
+    └─ optional: pfn(arg) callback                  ← 用户自定义回调
+</code></pre><p>关键点：</p>
+<ul>
+<li><strong>1ms 超时</strong>: <code>epoll_wait</code> 超时设置为 1ms，保证定时器精度在 1ms 级别</li>
+<li><strong>pfnPrepare</strong>: 当 epoll 返回事件时，调用 <code>OnPollPreparePfn</code>，它把 epoll 事件转换为 <code>pollfd.revents</code>，然后把 <code>stPoll_t</code> 加入 active list</li>
+<li><strong>pfnProcess</strong>: 当处理 active list 时，调用 <code>OnPollProcessEvent</code>，它调用 <code>co_resume(co)</code> 恢复等待 IO 的协程</li>
+</ul>
+<h3 id="34-桥接函数co_poll_inner">3.4 桥接函数：co_poll_inner()<a hidden class="anchor" aria-hidden="true" href="#34-桥接函数co_poll_inner">#</a></h3>
+<p><code>co_poll_inner()</code> 是协程和事件循环之间的桥梁。它的参数是一个 <code>pollfd</code> 数组和超时时间：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c" data-lang="c"><span class="line"><span class="cl"><span class="kt">int</span> <span class="nf">co_poll_inner</span><span class="p">(</span><span class="kt">stCoEpoll_t</span> <span class="o">*</span><span class="n">ctx</span><span class="p">,</span> <span class="k">struct</span> <span class="n">pollfd</span> <span class="n">fds</span><span class="p">[],</span> <span class="kt">nfds_t</span> <span class="n">nfds</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">                  <span class="kt">int</span> <span class="n">timeout</span><span class="p">,</span> <span class="kt">poll_pfn_t</span> <span class="n">pollfunc</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="p">(</span><span class="n">timeout</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="k">return</span> <span class="nf">pollfunc</span><span class="p">(</span><span class="n">fds</span><span class="p">,</span> <span class="n">nfds</span><span class="p">,</span> <span class="n">timeout</span><span class="p">);</span>  <span class="c1">// 不等待
+</span></span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="kt">stCoRoutine_t</span><span class="o">*</span> <span class="n">self</span> <span class="o">=</span> <span class="nf">co_self</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">stPoll_t</span><span class="o">&amp;</span> <span class="n">arg</span> <span class="o">=</span> <span class="o">*</span><span class="p">((</span><span class="kt">stPoll_t</span><span class="o">*</span><span class="p">)</span><span class="nf">malloc</span><span class="p">(</span><span class="k">sizeof</span><span class="p">(</span><span class="kt">stPoll_t</span><span class="p">)));</span>
+</span></span><span class="line"><span class="cl">    <span class="c1">// ... 初始化 ...
+</span></span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="c1">// 1. 注册所有 fd 到 epoll
+</span></span></span><span class="line"><span class="cl">    <span class="k">for</span> <span class="p">(</span><span class="kt">nfds_t</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">nfds</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="n">arg</span><span class="p">.</span><span class="n">pPollItems</span><span class="p">[</span><span class="n">i</span><span class="p">].</span><span class="n">pfnPrepare</span> <span class="o">=</span> <span class="n">OnPollPreparePfn</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">        <span class="c1">// ... epoll_ctl(ADD, fd, events) ...
+</span></span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="c1">// 2. 添加超时
+</span></span></span><span class="line"><span class="cl">    <span class="n">arg</span><span class="p">.</span><span class="n">ullExpireTime</span> <span class="o">=</span> <span class="n">now</span> <span class="o">+</span> <span class="n">timeout</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="nf">AddTimeout</span><span class="p">(</span><span class="n">ctx</span><span class="o">-&gt;</span><span class="n">pTimeout</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">arg</span><span class="p">,</span> <span class="n">now</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="c1">// 3. 挂起当前协程！
+</span></span></span><span class="line"><span class="cl">    <span class="nf">co_yield_env</span><span class="p">(</span><span class="nf">co_get_curr_thread_env</span><span class="p">());</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="c1">// 4. 被唤醒后，清理 epoll 注册，复制结果
+</span></span></span><span class="line"><span class="cl">    <span class="c1">// ... epoll_ctl(DEL, fd) ...
+</span></span></span><span class="line"><span class="cl">    <span class="c1">// ... fds[i].revents = arg.fds[i].revents ...
+</span></span></span><span class="line"><span class="cl">    <span class="k">return</span> <span class="n">iRaiseCnt</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p><strong>关键流程</strong>：</p>
+<pre tabindex="0"><code>用户协程                     epoll 实例              事件循环(另一个栈上)
+    │                           │                        │
+    ├─ poll(fds, nfds, t) ─────►│                        │
+    │   ├─ epoll_ctl(ADD) ─────►│                        │
+    │   ├─ AddTimeout ─────────►│ (加入时间轮)            │
+    │   ├─ co_yield() ─────────┤                        │
+    │   │                      │                        │
+    │   │                      │   ┌─ epoll_wait ───────┤
+    │   │                      │   │   → 事件就绪!      │
+    │   │                      │   ├─ pfnPrepare:       │
+    │   │                      │   │   设置 revents     │
+    │   │                      │   │   加入 active list │
+    │   │                      │   │                    │
+    │   │                      │   ├─ pfnProcess:       │
+    │   │                      │   │   co_resume(co) ───┤
+    │   │◄─ co_resume() ───────┤   │                    │
+    │   ├─ epoll_ctl(DEL) ────►│                        │
+    │   ├─ 复制 revents        │                        │
+    │◄──── 返回 poll 结果 ─────┤                        │
+</code></pre><p><strong>💡 核心要点</strong>：</p>
+<ul>
+<li><code>co_eventloop</code> 是事件循环的&quot;发动机&quot;，持续地执行 <code>epoll_wait → 分派事件 → 恢复协程</code></li>
+<li><code>co_poll_inner</code> 是协程进入等待的&quot;入口&quot;：注册事件 → 让出 → 回来后清理</li>
+<li>时间轮定时器 O(1) 的添加和过期取出保证了高性能</li>
+<li>Hook 的 <code>poll()</code> 调用最终通过 <code>co_poll_inner</code> 与事件循环对接</li>
+</ul>
+<hr>
+<h2 id="4-共享栈内存管理">4. 共享栈内存管理<a hidden class="anchor" aria-hidden="true" href="#4-共享栈内存管理">#</a></h2>
+<h3 id="41-三大结构体">4.1 三大结构体<a hidden class="anchor" aria-hidden="true" href="#41-三大结构体">#</a></h3>
+<h4 id="结构体一stcoroutine_t协程">结构体一：stCoRoutine_t（协程）<a hidden class="anchor" aria-hidden="true" href="#结构体一stcoroutine_t协程">#</a></h4>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c" data-lang="c"><span class="line"><span class="cl"><span class="k">struct</span> <span class="kt">stCoRoutine_t</span>
+</span></span><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">stCoRoutineEnv_t</span> <span class="o">*</span><span class="n">env</span><span class="p">;</span>      <span class="c1">// 所属的协程环境（每个线程一个）
+</span></span></span><span class="line"><span class="cl">    <span class="kt">pfn_co_routine_t</span> <span class="n">pfn</span><span class="p">;</span>       <span class="c1">// 协程函数
+</span></span></span><span class="line"><span class="cl">    <span class="kt">void</span> <span class="o">*</span><span class="n">arg</span><span class="p">;</span>                  <span class="c1">// 函数参数
+</span></span></span><span class="line"><span class="cl">    <span class="kt">coctx_t</span> <span class="n">ctx</span><span class="p">;</span>                <span class="c1">// CPU 上下文（寄存器+栈指针）
+</span></span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="kt">char</span> <span class="n">cStart</span><span class="p">;</span>                <span class="c1">// 是否已启动
+</span></span></span><span class="line"><span class="cl">    <span class="kt">char</span> <span class="n">cEnd</span><span class="p">;</span>                  <span class="c1">// 是否已结束
+</span></span></span><span class="line"><span class="cl">    <span class="kt">char</span> <span class="n">cIsMain</span><span class="p">;</span>               <span class="c1">// 是否为主协程
+</span></span></span><span class="line"><span class="cl">    <span class="kt">char</span> <span class="n">cEnableSysHook</span><span class="p">;</span>        <span class="c1">// 是否启用系统调用 hook
+</span></span></span><span class="line"><span class="cl">    <span class="kt">char</span> <span class="n">cIsShareStack</span><span class="p">;</span>         <span class="c1">// 是否使用共享栈
+</span></span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="kt">void</span> <span class="o">*</span><span class="n">pvEnv</span><span class="p">;</span>                <span class="c1">// 协程本地环境变量（用于 hook env）
+</span></span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="kt">stStackMem_t</span><span class="o">*</span> <span class="n">stack_mem</span><span class="p">;</span>    <span class="c1">// 栈内存
+</span></span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="c1">// 共享栈相关：被换出时保存栈内容
+</span></span></span><span class="line"><span class="cl">    <span class="kt">char</span><span class="o">*</span> <span class="n">stack_sp</span><span class="p">;</span>             <span class="c1">// 当前栈指针
+</span></span></span><span class="line"><span class="cl">    <span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">save_size</span><span class="p">;</span>     <span class="c1">// 保存的栈大小
+</span></span></span><span class="line"><span class="cl">    <span class="kt">char</span><span class="o">*</span> <span class="n">save_buffer</span><span class="p">;</span>          <span class="c1">// 保存的栈内容缓冲
+</span></span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="kt">stCoSpec_t</span> <span class="n">aSpec</span><span class="p">[</span><span class="mi">1024</span><span class="p">];</span>     <span class="c1">// 协程本地存储（类似 thread-local）
+</span></span></span><span class="line"><span class="cl"><span class="p">};</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h4 id="结构体二ststackmem_t栈内存块">结构体二：stStackMem_t（栈内存块）<a hidden class="anchor" aria-hidden="true" href="#结构体二ststackmem_t栈内存块">#</a></h4>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c" data-lang="c"><span class="line"><span class="cl"><span class="k">struct</span> <span class="kt">stStackMem_t</span>
+</span></span><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">stCoRoutine_t</span><span class="o">*</span> <span class="n">occupy_co</span><span class="p">;</span>   <span class="c1">// 当前占用此栈的协程
+</span></span></span><span class="line"><span class="cl">    <span class="kt">int</span> <span class="n">stack_size</span><span class="p">;</span>             <span class="c1">// 栈大小
+</span></span></span><span class="line"><span class="cl">    <span class="kt">char</span><span class="o">*</span> <span class="n">stack_bp</span><span class="p">;</span>             <span class="c1">// 栈顶（高地址）= stack_buffer + stack_size
+</span></span></span><span class="line"><span class="cl">    <span class="kt">char</span><span class="o">*</span> <span class="n">stack_buffer</span><span class="p">;</span>         <span class="c1">// 栈内存起始（低地址）
+</span></span></span><span class="line"><span class="cl"><span class="p">};</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h4 id="结构体三stsharestack_t共享栈池">结构体三：stShareStack_t（共享栈池）<a hidden class="anchor" aria-hidden="true" href="#结构体三stsharestack_t共享栈池">#</a></h4>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c" data-lang="c"><span class="line"><span class="cl"><span class="k">struct</span> <span class="kt">stShareStack_t</span>
+</span></span><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">alloc_idx</span><span class="p">;</span>     <span class="c1">// 轮询分配索引
+</span></span></span><span class="line"><span class="cl">    <span class="kt">int</span> <span class="n">stack_size</span><span class="p">;</span>             <span class="c1">// 每个栈的大小
+</span></span></span><span class="line"><span class="cl">    <span class="kt">int</span> <span class="n">count</span><span class="p">;</span>                  <span class="c1">// 栈数量
+</span></span></span><span class="line"><span class="cl">    <span class="kt">stStackMem_t</span><span class="o">**</span> <span class="n">stack_array</span><span class="p">;</span> <span class="c1">// 栈数组
+</span></span></span><span class="line"><span class="cl"><span class="p">};</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h4 id="补充stcoroutineenv_t线程级环境">补充：stCoRoutineEnv_t（线程级环境）<a hidden class="anchor" aria-hidden="true" href="#补充stcoroutineenv_t线程级环境">#</a></h4>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c" data-lang="c"><span class="line"><span class="cl"><span class="k">struct</span> <span class="kt">stCoRoutineEnv_t</span>
+</span></span><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">stCoRoutine_t</span> <span class="o">*</span><span class="n">pCallStack</span><span class="p">[</span><span class="mi">128</span><span class="p">];</span>  <span class="c1">// 调用栈（最多嵌套 128 层）
+</span></span></span><span class="line"><span class="cl">    <span class="kt">int</span> <span class="n">iCallStackSize</span><span class="p">;</span>              <span class="c1">// 调用栈深度
+</span></span></span><span class="line"><span class="cl">    <span class="kt">stCoEpoll_t</span> <span class="o">*</span><span class="n">pEpoll</span><span class="p">;</span>             <span class="c1">// epoll 事件循环实例
+</span></span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="c1">// 共享栈相关
+</span></span></span><span class="line"><span class="cl">    <span class="kt">stCoRoutine_t</span><span class="o">*</span> <span class="n">pending_co</span><span class="p">;</span>       <span class="c1">// 即将运行的协程
+</span></span></span><span class="line"><span class="cl">    <span class="kt">stCoRoutine_t</span><span class="o">*</span> <span class="n">occupy_co</span><span class="p">;</span>        <span class="c1">// 上次占用当前栈的协程
+</span></span></span><span class="line"><span class="cl"><span class="p">};</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="42-内存布局示意">4.2 内存布局示意<a hidden class="anchor" aria-hidden="true" href="#42-内存布局示意">#</a></h3>
+<pre tabindex="0"><code>私有栈模式：
+┌─────────────────────────────┐
+│    stCoRoutine_t A          │
+│    │                        │
+│    └─ stack_mem ───────────►│  stStackMem_t
+│                             │    stack_buffer ──► ┌─────────┐
+│                             │                      │ A的栈   │ 128KB
+│                             │    stack_bp ────────►└─────────┘
+│                             │
+│    stCoRoutine_t B          │
+│    │                        │
+│    └─ stack_mem ───────────►│  stStackMem_t
+│                                  stack_buffer ──► ┌─────────┐
+│                                                    │ B的栈   │ 128KB
+│                                  stack_bp ────────►└─────────┘
+
+共享栈模式（N个协程共享M个栈，M &lt; N）：
+stShareStack_t
+    stack_array[0] ──► stStackMem_t  ──► ┌─────────┐
+    stack_array[1] ──► stStackMem_t  ──► │ 物理栈  │ M个物理栈
+                                          └─────────┘
+    alloc_idx: 轮询选择下一个可用栈
+
+10000个协程 × 128KB = 1.28GB (私有栈)
+10000个协程 × 4个共享栈 × 128KB = 512KB + 少量 save_buffer (共享栈)
+</code></pre><h3 id="43-共享栈的切换算法">4.3 共享栈的切换算法<a hidden class="anchor" aria-hidden="true" href="#43-共享栈的切换算法">#</a></h3>
+<p>共享栈的核心在 <code>co_swap()</code> 函数中：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
+</span><span class="lnt">31
+</span><span class="lnt">32
+</span><span class="lnt">33
+</span><span class="lnt">34
+</span><span class="lnt">35
+</span><span class="lnt">36
+</span><span class="lnt">37
+</span><span class="lnt">38
+</span><span class="lnt">39
+</span><span class="lnt">40
+</span><span class="lnt">41
+</span><span class="lnt">42
+</span><span class="lnt">43
+</span><span class="lnt">44
+</span><span class="lnt">45
+</span><span class="lnt">46
+</span><span class="lnt">47
+</span><span class="lnt">48
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c" data-lang="c"><span class="line"><span class="cl"><span class="kt">void</span> <span class="nf">co_swap</span><span class="p">(</span><span class="kt">stCoRoutine_t</span><span class="o">*</span> <span class="n">curr</span><span class="p">,</span> <span class="kt">stCoRoutine_t</span><span class="o">*</span> <span class="n">pending_co</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">stCoRoutineEnv_t</span><span class="o">*</span> <span class="n">env</span> <span class="o">=</span> <span class="nf">co_get_curr_thread_env</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="c1">// 1. 记录当前栈指针（通过局部变量的地址）
+</span></span></span><span class="line"><span class="cl">    <span class="kt">char</span> <span class="n">c</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="n">curr</span><span class="o">-&gt;</span><span class="n">stack_sp</span> <span class="o">=</span> <span class="o">&amp;</span><span class="n">c</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">pending_co</span><span class="o">-&gt;</span><span class="n">cIsShareStack</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="n">env</span><span class="o">-&gt;</span><span class="n">pending_co</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">        <span class="n">env</span><span class="o">-&gt;</span><span class="n">occupy_co</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="k">else</span>
+</span></span><span class="line"><span class="cl">    <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="n">env</span><span class="o">-&gt;</span><span class="n">pending_co</span> <span class="o">=</span> <span class="n">pending_co</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">        <span class="c1">// 获取当前占用 pending_co 这个栈内存的协程
+</span></span></span><span class="line"><span class="cl">        <span class="kt">stCoRoutine_t</span><span class="o">*</span> <span class="n">occupy_co</span> <span class="o">=</span> <span class="n">pending_co</span><span class="o">-&gt;</span><span class="n">stack_mem</span><span class="o">-&gt;</span><span class="n">occupy_co</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">        <span class="c1">// 把 pending_co 标记为占用者
+</span></span></span><span class="line"><span class="cl">        <span class="n">pending_co</span><span class="o">-&gt;</span><span class="n">stack_mem</span><span class="o">-&gt;</span><span class="n">occupy_co</span> <span class="o">=</span> <span class="n">pending_co</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">        <span class="n">env</span><span class="o">-&gt;</span><span class="n">occupy_co</span> <span class="o">=</span> <span class="n">occupy_co</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">        <span class="k">if</span> <span class="p">(</span><span class="n">occupy_co</span> <span class="o">&amp;&amp;</span> <span class="n">occupy_co</span> <span class="o">!=</span> <span class="n">pending_co</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">        <span class="p">{</span>
+</span></span><span class="line"><span class="cl">            <span class="c1">// 把原来的占用者的栈内容保存到它的 save_buffer
+</span></span></span><span class="line"><span class="cl">            <span class="nf">save_stack_buffer</span><span class="p">(</span><span class="n">occupy_co</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">        <span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="c1">// 2. 上下文切换
+</span></span></span><span class="line"><span class="cl">    <span class="nf">coctx_swap</span><span class="p">(</span><span class="o">&amp;</span><span class="p">(</span><span class="n">curr</span><span class="o">-&gt;</span><span class="n">ctx</span><span class="p">),</span> <span class="o">&amp;</span><span class="p">(</span><span class="n">pending_co</span><span class="o">-&gt;</span><span class="n">ctx</span><span class="p">));</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="c1">// 3. ⚠️ 切换回来后，栈可能已被覆盖！重新获取数据
+</span></span></span><span class="line"><span class="cl">    <span class="kt">stCoRoutineEnv_t</span><span class="o">*</span> <span class="n">curr_env</span> <span class="o">=</span> <span class="nf">co_get_curr_thread_env</span><span class="p">();</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">stCoRoutine_t</span><span class="o">*</span> <span class="n">update_occupy_co</span> <span class="o">=</span> <span class="n">curr_env</span><span class="o">-&gt;</span><span class="n">occupy_co</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">stCoRoutine_t</span><span class="o">*</span> <span class="n">update_pending_co</span> <span class="o">=</span> <span class="n">curr_env</span><span class="o">-&gt;</span><span class="n">pending_co</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="p">(</span><span class="n">update_occupy_co</span> <span class="o">&amp;&amp;</span> <span class="n">update_pending_co</span> <span class="o">&amp;&amp;</span>
+</span></span><span class="line"><span class="cl">        <span class="n">update_occupy_co</span> <span class="o">!=</span> <span class="n">update_pending_co</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">    <span class="p">{</span>
+</span></span><span class="line"><span class="cl">        <span class="c1">// 把之前被换出的协程的栈内容恢复回来
+</span></span></span><span class="line"><span class="cl">        <span class="k">if</span> <span class="p">(</span><span class="n">update_pending_co</span><span class="o">-&gt;</span><span class="n">save_buffer</span> <span class="o">&amp;&amp;</span> <span class="n">update_pending_co</span><span class="o">-&gt;</span><span class="n">save_size</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">        <span class="p">{</span>
+</span></span><span class="line"><span class="cl">            <span class="nf">memcpy</span><span class="p">(</span><span class="n">update_pending_co</span><span class="o">-&gt;</span><span class="n">stack_sp</span><span class="p">,</span> <span class="n">update_pending_co</span><span class="o">-&gt;</span><span class="n">save_buffer</span><span class="p">,</span>
+</span></span><span class="line"><span class="cl">                   <span class="n">update_pending_co</span><span class="o">-&gt;</span><span class="n">save_size</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">        <span class="p">}</span>
+</span></span><span class="line"><span class="cl">    <span class="p">}</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><p><code>save_stack_buffer</code> 的实现：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-c" data-lang="c"><span class="line"><span class="cl"><span class="kt">void</span> <span class="nf">save_stack_buffer</span><span class="p">(</span><span class="kt">stCoRoutine_t</span><span class="o">*</span> <span class="n">occupy_co</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl"><span class="p">{</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">stStackMem_t</span><span class="o">*</span> <span class="n">stack_mem</span> <span class="o">=</span> <span class="n">occupy_co</span><span class="o">-&gt;</span><span class="n">stack_mem</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="kt">int</span> <span class="n">len</span> <span class="o">=</span> <span class="n">stack_mem</span><span class="o">-&gt;</span><span class="n">stack_bp</span> <span class="o">-</span> <span class="n">occupy_co</span><span class="o">-&gt;</span><span class="n">stack_sp</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">    <span class="c1">// stack_bp 是栈顶（高地址），stack_sp 是当前栈指针
+</span></span></span><span class="line"><span class="cl">    <span class="c1">// len 是当前栈上有效数据的长度
+</span></span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="c1">// 释放旧的 save_buffer，分配新的
+</span></span></span><span class="line"><span class="cl">    <span class="k">if</span> <span class="p">(</span><span class="n">occupy_co</span><span class="o">-&gt;</span><span class="n">save_buffer</span><span class="p">)</span>
+</span></span><span class="line"><span class="cl">        <span class="nf">free</span><span class="p">(</span><span class="n">occupy_co</span><span class="o">-&gt;</span><span class="n">save_buffer</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="n">occupy_co</span><span class="o">-&gt;</span><span class="n">save_buffer</span> <span class="o">=</span> <span class="p">(</span><span class="kt">char</span><span class="o">*</span><span class="p">)</span><span class="nf">malloc</span><span class="p">(</span><span class="n">len</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl">    <span class="n">occupy_co</span><span class="o">-&gt;</span><span class="n">save_size</span> <span class="o">=</span> <span class="n">len</span><span class="p">;</span>
+</span></span><span class="line"><span class="cl">
+</span></span><span class="line"><span class="cl">    <span class="c1">// 把栈上数据从当前指针到栈顶全部复制到 save_buffer
+</span></span></span><span class="line"><span class="cl">    <span class="nf">memcpy</span><span class="p">(</span><span class="n">occupy_co</span><span class="o">-&gt;</span><span class="n">save_buffer</span><span class="p">,</span> <span class="n">occupy_co</span><span class="o">-&gt;</span><span class="n">stack_sp</span><span class="p">,</span> <span class="n">len</span><span class="p">);</span>
+</span></span><span class="line"><span class="cl"><span class="p">}</span>
+</span></span></code></pre></td></tr></table>
+</div>
+</div><h3 id="44-共享栈的完整生命周期">4.4 共享栈的完整生命周期<a hidden class="anchor" aria-hidden="true" href="#44-共享栈的完整生命周期">#</a></h3>
+<pre tabindex="0"><code>时间点   事件                             物理栈 P0 的内容    协程 A 的状态
+─────────────────────────────────────────────────────────────────────────
+T1     A 运行中                          [A 的数据]           running, occupy=P0
+T2     A: poll() → co_yield()            [A 的数据]           saved sp, 暂停
+T3     B 被调度，B 也使用这个栈            [B 的数据]           - 
+       co_swap(A→B):
+         - 发现 P0.occupy_co == A
+         - stack_bp - stack_sp = 64KB
+         - malloc + memcpy → A.save_buffer
+         - P0.occupy_co = B
+         - coctx_swap → B 开始运行        [B 的数据]
+T4     B: co_yield()                     [B 的数据]           -
+       co_swap(B→A):
+         - 发现 P0.occupy_co == B
+         - save_stack_buffer(B)           [B 的数据 → B.save_buffer]
+         - P0.occupy_co = A
+         - coctx_swap → A 恢复
+         - 发现 A.save_buffer 存在
+         - memcpy(A.save_buffer → A.stack_sp)
+                                          [A 的数据]           A 恢复运行！
+</code></pre><p><strong>关键洞察</strong>：共享栈的&quot;共享&quot;在于多个协程轮流使用同一个物理栈。切出时把栈内容保存到堆上（<code>save_buffer</code>），切入时如果换入的协程之前被保存过，再把内容从堆上复制回来。这是一种<strong>时间换空间</strong>的策略。</p>
+<h3 id="45-私有栈-vs-共享栈">4.5 私有栈 vs 共享栈<a hidden class="anchor" aria-hidden="true" href="#45-私有栈-vs-共享栈">#</a></h3>
+<table>
+  <thead>
+      <tr>
+          <th>特性</th>
+          <th>私有栈</th>
+          <th>共享栈</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td>内存占用</td>
+          <td>每个协程独占 128KB</td>
+          <td>多个协程共享几个 128KB 栈</td>
+      </tr>
+      <tr>
+          <td>切换开销</td>
+          <td>无额外内存操作</td>
+          <td>需要 memcpy 保存/恢复栈内容</td>
+      </tr>
+      <tr>
+          <td>适用场景</td>
+          <td>协程数量少（几百）</td>
+          <td>海量连接（数万到数百万）</td>
+      </tr>
+      <tr>
+          <td>线程安全</td>
+          <td>天然隔离</td>
+          <td>save/restore 需要谨慎</td>
+      </tr>
+      <tr>
+          <td>使用方式</td>
+          <td><code>attr.share_stack = NULL</code></td>
+          <td><code>attr.share_stack = co_alloc_sharestack(count, size)</code></td>
+      </tr>
+  </tbody>
+</table>
+<p><strong>💡 核心要点</strong>：</p>
+<ul>
+<li><code>stCoRoutine_t</code> 描述&quot;协程&quot;，<code>stStackMem_t</code> 描述&quot;栈内存&quot;，<code>stShareStack_t</code> 描述&quot;共享栈池&quot;</li>
+<li>共享栈的切换在 <code>co_swap()</code> 中自动完成：切出时保存原占用者的栈，切入时恢复目标协程的栈</li>
+<li>实现细节中有两层保护：<code>occupy_co</code> 追踪栈的当前使用者，<code>save_buffer</code> 保存被换出者的栈内容</li>
+<li><code>co_swap</code> 返回后需要<strong>重新获取</strong> <code>env</code> 指针，因为栈可能已被其他协程覆盖</li>
+</ul>
+<hr>
+
+
+  </div>
+
+  <footer class="post-footer">
+    <ul class="post-tags">
+    </ul>
+  </footer>
+</article>
+    </main>
+    
+<footer class="footer">
+        <span>&copy; 2026 <a href="http://localhost:1313/">My New Hugo Project</a></span> · 
+
+    
+    
+    <span>
+        Powered by
+        <a href="https://gohugo.io/?utm_source=papermod" rel="noopener" target="_blank">Hugo</a> &
+        <a href="https://github.com/adityatelange/hugo-PaperMod/" rel="noopener" target="_blank">PaperMod</a>
+    </span>
+</footer>
+<a href="#top" id="top-link" class="top-link hidden" aria-label="go to top" title="Go to Top (Alt + G)" accesskey="g">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+        stroke-linecap="round" stroke-linejoin="round" class="feather feather-chevrons-up">
+        <polyline points="17 11 12 6 7 11"></polyline>
+        <polyline points="17 18 12 13 7 18"></polyline>
+    </svg>
+</a>
+
+<script>
+    let menu = document.getElementById('menu');
+    if (menu) {
+        
+        const scrollPosition = localStorage.getItem("menu-scroll-position");
+        if (scrollPosition) {
+            menu.scrollLeft = parseInt(scrollPosition, 10);
+        }
+        
+        menu.onscroll = function () {
+            localStorage.setItem("menu-scroll-position", menu.scrollLeft);
+        }
+    }
+
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener("click", function (e) {
+            e.preventDefault();
+            var id = this.getAttribute("href").substr(1);
+            if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView({
+                    behavior: "smooth"
+                });
+            } else {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView();
+            }
+            if (id === "top") {
+                history.replaceState(null, null, " ");
+            } else {
+                history.pushState(null, null, `#${id}`);
+            }
+        });
+    });
+
+</script>
+<script>
+    var toplink = document.getElementById("top-link");
+    window.onscroll = function () {
+        const scrollThreshold = window.innerHeight;
+        if (document.body.scrollTop > scrollThreshold || document.documentElement.scrollTop > scrollThreshold) {
+            toplink.classList.remove("hidden");
+        } else {
+            toplink.classList.add("hidden");
+        }
+    };
+
+</script>
+<script>
+    document.getElementById("theme-toggle").addEventListener("click", () => {
+        const html = document.querySelector("html");
+        if (html.dataset.theme === "dark") {
+            html.dataset.theme = 'light';
+            localStorage.setItem("pref-theme", 'light');
+        } else {
+            html.dataset.theme = 'dark';
+            localStorage.setItem("pref-theme", 'dark');
+        }
+    })
+
+</script>
+</body>
+
+</html>
