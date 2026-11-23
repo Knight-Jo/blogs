@@ -1,0 +1,6 @@
+{{- $path := (.Get "path") | default (.Get 0) -}}
+{{- if not $path -}}
+  {{- errorf "readfile shortcode requires a file path" -}}
+{{- end -}}
+{{- $fullPath := path.Join .Page.File.Dir $path -}}
+{{- readFile $fullPath | markdownify -}}
